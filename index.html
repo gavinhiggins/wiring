@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentry Robot Wiring Diagram & Architecture</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel-bg: rgba(22, 27, 34, 0.95);
+      --panel-border: #30363d;
+      --text-main: #f0f6fc;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Header Bar */
+    header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 52px;
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 50;
+      backdrop-filter: blur(10px);
+    }
+
+    header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    header .badge {
+      font-size: 11px;
+      background: #1f6feb33;
+      border: 1px solid #388bfd66;
+      color: #58a6ff;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: normal;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .btn {
+      background: #21262d;
+      border: 1px solid #363b42;
+      color: var(--text-main);
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn:hover {
+      background: #30363d;
+      border-color: #8b949e;
+    }
+
+    /* Diagram Canvas Container */
+    #viewport {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+      cursor: grab;
+      overflow: hidden;
+    }
+
+    #viewport.panning {
+      cursor: grabbing;
+    }
+
+    svg#canvas {
+      width: 100%;
+      height: 100%;
+      transform-origin: 0 0;
+    }
+
+    /* SVG Nodes and Wires Styling */
+    .module-box {
+      rx: 8;
+      stroke-width: 2;
+      transition: filter 0.2s, stroke-width 0.2s;
+      cursor: pointer;
+    }
+
+    .module-box:hover {
+      filter: drop-shadow(0 0 10px rgba(88, 166, 255, 0.45));
+      stroke-width: 2.5;
+    }
+
+    .module-title {
+      font-size: 13px;
+      font-weight: 700;
+      fill: #ffffff;
+      pointer-events: none;
+    }
+
+    .module-sub {
+      font-size: 10.5px;
+      fill: #8b949e;
+      pointer-events: none;
+    }
+
+    .section-boundary {
+      fill: rgba(22, 27, 34, 0.4);
+      stroke: #30363d;
+      stroke-dasharray: 6 6;
+      stroke-width: 1.5;
+      rx: 12;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      fill: #8b949e;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+    }
+
+    /* Wire Hover & Selection */
+    .wire-group {
+      cursor: pointer;
+    }
+
+    .wire-hitbox {
+      stroke: transparent;
+      stroke-width: 18px;
+      fill: none;
+      cursor: pointer;
+    }
+
+    .wire-hitbox:hover + .wire-render {
+      filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 10px var(--accent));
+    }
+
+    .wire-group.active .wire-render {
+      filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 12px var(--accent));
+    }
+
+    .wire-label {
+      font-size: 10px;
+      font-weight: 600;
+      fill: #c9d1d9;
+      paint-order: stroke;
+      stroke: #0d1117;
+      stroke-width: 3px;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+
+    /* Interactive Legend / Key */
+    #legend {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      backdrop-filter: blur(12px);
+      z-index: 40;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      width: 280px;
+    }
+
+    #legend h2 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.15s;
+    }
+
+    .legend-item:hover {
+      background: #21262d;
+    }
+
+    .legend-item.active {
+      background: #1f6feb2d;
+      border-left: 3px solid var(--accent);
+    }
+
+    .swatch {
+      width: 30px;
+      height: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Detail Modal / Flyout */
+    #detail-panel {
+      position: absolute;
+      top: 68px;
+      right: 20px;
+      width: 360px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      backdrop-filter: blur(14px);
+      z-index: 60;
+      box-shadow: 0 14px 35px rgba(0,0,0,0.6);
+      display: none;
+      animation: fadeIn 0.18s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    #detail-panel h3 {
+      font-size: 16px;
+      margin-bottom: 4px;
+      color: #fff;
+    }
+
+    #detail-panel .sub-heading {
+      font-size: 11px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 14px;
+      font-weight: 600;
+    }
+
+    .detail-row {
+      margin-bottom: 10px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .detail-row span.label {
+      color: var(--text-muted);
+      display: block;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .detail-row span.value {
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    #close-detail {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    #close-detail:hover {
+      color: #fff;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: #30363d;
+      font-size: 11px;
+      margin-right: 5px;
+      margin-top: 3px;
+    }
+
+    /* Grid pattern background */
+    .bg-grid {
+      fill: none;
+      stroke: #161b22;
+      stroke-width: 1;
+    }
+    .bg-dots {
+      fill: #21262d;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>
+      <span>⚡ Sentry Robot Wiring Architecture</span>
+      <span class="badge">RoboMaster 2026 Spec</span>
+    </h1>
+    <div class="header-controls">
+      <span><kbd>Scroll</kbd> Zoom</span>
+      <span>•</span>
+      <span><kbd>Left-Click Drag</kbd> Pan</span>
+      <span>•</span>
+      <button class="btn" id="btn-reset">Reset View</button>
+      <button class="btn" id="btn-fit">Fit All</button>
+    </div>
+  </header>
+
+  <!-- Interactive Legend / Wire Key -->
+  <div id="legend">
+    <h2>
+      <span>Wire / Cable Key</span>
+      <span style="font-size: 10px; color: var(--accent);">(Click for Info)</span>
+    </h2>
+    <div id="legend-list"></div>
+  </div>
+
+  <!-- Detail Popup Panel -->
+  <div id="detail-panel">
+    <button id="close-detail">&times;</button>
+    <h3 id="panel-title">Wire / Connector Details</h3>
+    <div id="panel-sub" class="sub-heading">Specification</div>
+    <div id="panel-body"></div>
+  </div>
+
+  <div id="viewport">
+    <svg id="canvas">
+      <defs>
+        <!-- Background Dot Grid -->
+        <pattern id="grid-dots" width="40" height="40" patternUnits="userSpaceOnUse">
+          <circle cx="20" cy="20" r="1.5" class="bg-dots"></circle>
+        </pattern>
+        <!-- Arrow markers for signal direction -->
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#8b949e"/>
+        </marker>
+        <marker id="arrow-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#58a6ff"/>
+        </marker>
+      </defs>
+
+      <!-- Pan & Zoom Group -->
+      <g id="scene">
+        <!-- Infinite Grid Background Layer -->
+        <rect x="-10000" y="-10000" width="20000" height="20000" fill="url(#grid-dots)" />
+
+        <!-- Subsystem Boundaries / Zones -->
+        <g id="boundaries-layer"></g>
+
+        <!-- Wires / Cables Layer -->
+        <g id="wires-layer"></g>
+
+        <!-- Modules / Electronic Boards Layer -->
+        <g id="modules-layer"></g>
+      </g>
+    </svg>
+  </div>
+
+  <script>
+    // Wire Specifications & Color definitions as requested
+    const WIRE_SPECS = {
+      "xt60-bat": {
+        id: "xt60-bat",
+        name: "XT60 Battery Power",
+        type: "High Current DC Power",
+        gauge: "12-14 AWG Silicone Wire",
+        connector: "Amass XT60-H High-Temp DC Plug (Yellow/Gold contacts)",
+        crimp: "Direct solder joint with heat shrink boot",
+        protocol: "22.2V - 25.2V Nominal DC (6S LiPo), ~60A continuous / 120A burst",
+        colorDesc: "Thick straight High-Current Power (Red/Black jacket)",
+        renderStyle: "straight-bold",
+        stroke: "#f85149",
+        width: 4
+      },
+      "xt30-pwr": {
+        id: "xt30-pwr",
+        name: "XT30 Main Power",
+        type: "Main Subsystem DC Power Distribution",
+        gauge: "16-18 AWG Flexible Silicone High-Temp Wire",
+        connector: "Amass XT30U / XT30 Female/Male Connectors",
+        crimp: "Direct soldered gold-plated pins",
+        protocol: "24V Power Bus / PMM regulated outputs (up to 30A)",
+        colorDesc: "Twisted Yellow & Gray pair",
+        renderStyle: "twisted-pair",
+        c1: "#e3b341", // Yellow
+        c2: "#8b949e", // Gray
+        width: 3
+      },
+      "jst-2pin-can": {
+        id: "jst-2pin-can",
+        name: "JST 2-Pin CAN",
+        type: "CAN Bus Differential Signal (CAN_H / CAN_L)",
+        gauge: "24-26 AWG Twisted Pair",
+        connector: "JST GH 1.25mm or JST PH 2.0mm 2-Pin Locking Connector",
+        crimp: "JST GH/PH Crimp Contacts (Gold/Tin plated phosphor bronze)",
+        protocol: "CAN 2.0B Differential @ 1 Mbps (CAN_H: White, CAN_L: Red, 120Ω termination at endpoints)",
+        colorDesc: "Twisted White and Red pair",
+        renderStyle: "twisted-pair",
+        c1: "#ffffff", // White
+        c2: "#f85149", // Red
+        width: 2.2
+      },
+      "jst-4pin-can-pwr": {
+        id: "jst-4pin-can-pwr",
+        name: "JST 4-Pin CAN + Low Power",
+        type: "CAN Bus + 5V/12V Logic Power Combo",
+        gauge: "26 AWG 4-Conductor (Two dual twisted pairs)",
+        connector: "JST GH 1.25mm 4-Pin Locking Header/Housing",
+        crimp: "JST GH phosphor bronze terminals (rated 1.0A / pin)",
+        protocol: "CAN_H / CAN_L (1 Mbps) + VCC (5V/12V) + GND",
+        colorDesc: "2 sets of twisted wires (White/Red for CAN + Yellow/Gray for VCC/GND)",
+        renderStyle: "dual-twisted",
+        c1: "#ffffff",
+        c2: "#f85149",
+        c3: "#e3b341",
+        c4: "#8b949e",
+        width: 2.2
+      },
+      "jst-armor": {
+        id: "jst-armor",
+        name: "JST Armor Plate Cable",
+        type: "Referee Impact Sensor Daisy-Chain Cable",
+        gauge: "26 AWG 4-Core Ribbon / Cable",
+        connector: "JST 4-Pin / 5-Pin Armor Interconnect (Referee spec)",
+        crimp: "JST Crimp Terminal with strain relief",
+        protocol: "RoboMaster Official Armor Sensor bus (Impact hit detection + Hit LEDs)",
+        colorDesc: "Straight Orange Wire",
+        renderStyle: "straight",
+        stroke: "#f0883e",
+        width: 2.5
+      },
+      "ref-cable": {
+        id: "ref-cable",
+        name: "Ref Cable (Main Referee System)",
+        type: "Referee System Main Communication & Sensor Bus",
+        gauge: "22-24 AWG Multi-conductor shielded",
+        connector: "Aviation GX12 / GX16 Circular Connector & Referee standard harness",
+        crimp: "Solder cup / High reliability industrial crimp",
+        protocol: "Referee Main Power, Telemetry, Video Transmitter Link & Armor Loop",
+        colorDesc: "Straight Amber / Yellow-Orange Wire",
+        renderStyle: "straight",
+        stroke: "#d29922",
+        width: 2.8
+      },
+      "black-ref-cable": {
+        id: "black-ref-cable",
+        name: "Black Ref Cable (Light Bar)",
+        type: "Referee Light Bar & Status Link",
+        gauge: "24 AWG Flexible Ribbon Cable",
+        connector: "RoboMaster Light Bar quick-connector",
+        crimp: "Industrial IDC / Crimp terminal",
+        protocol: "Robot Health, Team Color (Red/Blue), and Status Beacon Indicator",
+        colorDesc: "Straight Dark Charcoal / Black Ref Wire",
+        renderStyle: "straight",
+        stroke: "#6e7681",
+        width: 2.8
+      },
+      "jst-oled": {
+        id: "jst-oled",
+        name: "JST OLED Cable",
+        type: "Display I2C / SPI Low-voltage Interface",
+        gauge: "28 AWG Ribbon / 4-Pin Harness",
+        connector: "JST SH 1.0mm or PH 2.0mm 4-Pin",
+        crimp: "JST SH micro-crimp terminal",
+        protocol: "I2C (SCL/SDA) or SPI + 3.3V/5V for 0.96\" OLED chassis status display",
+        colorDesc: "Straight Cyan Wire",
+        renderStyle: "straight",
+        stroke: "#39c5cf",
+        width: 2
+      },
+      "dupont-imu-spi": {
+        id: "dupont-imu-spi",
+        name: "Dupont IMU SPI Cables",
+        type: "High-Speed Sensor Interface Bus",
+        gauge: "28 AWG Ribbon Wire with Dupont Housings",
+        connector: "2.54mm (0.1\") Female-to-Female Dupont Connector 6-Pin / 8-Pin",
+        crimp: "2.54mm Dupont gold pins",
+        protocol: "SPI Bus (MOSI, MISO, SCK, CS, INT, 3.3V, GND) up to 10 MHz",
+        colorDesc: "Straight Deep Purple Wire",
+        renderStyle: "straight",
+        stroke: "#bc8cff",
+        width: 2.2
+      },
+      "usb-ac": {
+        id: "usb-ac",
+        name: "USB-A to USB-C Cable",
+        type: "High-Bandwidth Depth Camera Vision Stream",
+        gauge: "High-Flex USB 3.1 Gen1 Shielded Cable",
+        connector: "Molded USB-A Male to USB-C with thumbscrew lock",
+        crimp: "Factory overmolded industrial high-flex harness",
+        protocol: "USB 3.0 / 3.1 Gen 1 (5 Gbps) RealSense RGB-D Point Cloud & Depth stream",
+        colorDesc: "Straight Blue Wire",
+        renderStyle: "straight",
+        stroke: "#58a6ff",
+        width: 3
+      },
+      "jst-uart-3pin": {
+        id: "jst-uart-3pin",
+        name: "3-Pin UART JST",
+        type: "Serial Telemetry & Host-Controller Comms",
+        gauge: "26 AWG 3-Conductor (TX, RX, GND)",
+        connector: "JST GH 1.25mm or JST PH 2.0mm 3-Pin",
+        crimp: "JST phosphor bronze crimps",
+        protocol: "Full-Duplex TTL Serial (115200 or 921600 baud, Jetson <-> MCB & Ref UART)",
+        colorDesc: "Straight Teal / Green-Blue Wire",
+        renderStyle: "straight",
+        stroke: "#2ea043",
+        width: 2.2
+      }
+    };
+
+    // Architecture Nodes (Whiteboard-accurate + RoboMaster Sentry modules)
+    const MODULES = [
+      // Chassis Section
+      { id: "bat", name: "Battery", sub: "6S LiPo 22.2V", zone: "chassis", x: 60, y: 150, w: 100, h: 65, bg: "#b62324", stroke: "#ff7b72" },
+      { id: "pmm", name: "PMM", sub: "Power Management Mod", zone: "chassis", x: 220, y: 130, w: 140, h: 90, bg: "#1f6feb", stroke: "#58a6ff" },
+      { id: "current-sensor", name: "Current Sensor", sub: "Inline Telemetry", zone: "chassis", x: 180, y: 270, w: 130, h: 55, bg: "#238636", stroke: "#3fb950" },
+      { id: "breakout-chassis", name: "Breakout Board", sub: "Chassis CAN Hub", zone: "chassis", x: 180, y: 380, w: 130, h: 70, bg: "#8957e5", stroke: "#a371f7" },
+      { id: "c620-wheel", name: "4x C620 ESCs", sub: "Chassis Drive Motors", zone: "chassis", x: 170, y: 520, w: 150, h: 70, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "wheel-motors", name: "Wheel Motors", sub: "M3508 x4", zone: "chassis", x: 170, y: 640, w: 150, h: 60, bg: "#21262d", stroke: "#484f58" },
+      { id: "chassis-imu", name: "Chassis IMU", sub: "BMI088 / Hi229", zone: "chassis", x: 170, y: 740, w: 120, h: 50, bg: "#1f6feb", stroke: "#58a6ff" },
+
+      { id: "mcb-a", name: "MCB Type A", sub: "Main Chassis MCU (STM32)", zone: "chassis", x: 420, y: 310, w: 160, h: 95, bg: "#238636", stroke: "#3fb950" },
+      { id: "a2z", name: "A2Z Board", sub: "Subsystem Hub", zone: "chassis", x: 380, y: 460, w: 100, h: 50, bg: "#8957e5", stroke: "#a371f7" },
+      { id: "yaw-encoder", name: "Yaw Encoder", sub: "Chassis-Turret Abs Enc", zone: "chassis", x: 500, y: 460, w: 110, h: 50, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "oled", name: "OLED Display", sub: "0.96\" Status Screen", zone: "chassis", x: 380, y: 550, w: 100, h: 50, bg: "#1f6feb", stroke: "#58a6ff" },
+
+      { id: "yaw-motor", name: "Yaw Motor", sub: "GM6020 Gimbal Motor", zone: "chassis", x: 580, y: 130, w: 140, h: 65, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "feed-motor", name: "Feed Motor", sub: "M2006 / C610 Feeder", zone: "chassis", x: 600, y: 220, w: 130, h: 60, bg: "#9e6a03", stroke: "#d29922" },
+
+      // Referee Subsystem on Chassis
+      { id: "light-bar", name: "Light Bar", sub: "Ref HP & Team Status", zone: "referee", x: 880, y: 80, w: 130, h: 50, bg: "#30363d", stroke: "#8b949e" },
+      { id: "mcm", name: "MCM", sub: "Main Controller Mod (Ref)", zone: "referee", x: 880, y: 155, w: 130, h: 55, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "armor-1", name: "Armor 1", sub: "Front Plate", zone: "referee", x: 840, y: 240, w: 80, h: 50, bg: "#b62324", stroke: "#ff7b72" },
+      { id: "armor-2", name: "Armor 2", sub: "Left Plate", zone: "referee", x: 940, y: 240, w: 80, h: 50, bg: "#b62324", stroke: "#ff7b72" },
+      { id: "armor-3", name: "Armor 3", sub: "Back Plate", zone: "referee", x: 1040, y: 240, w: 80, h: 50, bg: "#b62324", stroke: "#ff7b72" },
+      { id: "armor-4", name: "Armor 4", sub: "Right Plate", zone: "referee", x: 1140, y: 240, w: 80, h: 50, bg: "#b62324", stroke: "#ff7b72" },
+
+      // Slip Ring Transition (Chassis <-> Turret 360 continuous rotation)
+      { id: "slip-ring-chassis", name: "Slip Ring Chassis BB", sub: "Breakout Board (Top Chassis)", zone: "chassis", x: 570, y: 350, w: 200, h: 70, bg: "#b62324", stroke: "#ff7b72" },
+      { id: "slip-ring-core", name: "Slip Ring Capsule", sub: "360° Continuous Flange", zone: "transition", x: 610, y: 445, w: 120, h: 45, bg: "#30363d", stroke: "#e3b341" },
+      { id: "slip-ring-turret", name: "Slip Ring Turret BB", sub: "Breakout Board (Gimbal Base)", zone: "turret", x: 570, y: 515, w: 200, h: 70, bg: "#b62324", stroke: "#ff7b72" },
+
+      // Turret Subsystems
+      { id: "turret-breakout", name: "Turret Breakout", sub: "Power & CAN Distribution", zone: "turret", x: 580, y: 660, w: 180, h: 70, bg: "#8957e5", stroke: "#a371f7" },
+      { id: "pitch-motor", name: "Pitch Motor", sub: "GM6020 / C620 Gimbal", zone: "turret", x: 420, y: 660, w: 130, h: 60, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "c610-kicker", name: "C610 ESC", sub: "Feeder / Kicker Wheel", zone: "turret", x: 420, y: 760, w: 130, h: 55, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "kicker-wheel", name: "Kicker Motor", sub: "M2006 Kicker", zone: "turret", x: 420, y: 845, w: 130, h: 50, bg: "#21262d", stroke: "#484f58" },
+
+      { id: "flywheel-c620", name: "4x C620 ESCs", sub: "High-RPM Launch Wheels", zone: "turret", x: 610, y: 780, w: 160, h: 60, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "flywheel-motors", name: "Flywheel Motors", sub: "M3508 x4 Pair", zone: "turret", x: 610, y: 870, w: 160, h: 50, bg: "#21262d", stroke: "#484f58" },
+
+      { id: "mcb-c", name: "MCB Type C", sub: "Turret Gimbal Controller", zone: "turret", x: 840, y: 660, w: 150, h: 70, bg: "#238636", stroke: "#3fb950" },
+      { id: "gimbal-imu", name: "Turret IMU", sub: "SPI 6-Axis Gimbal IMU", zone: "turret", x: 1030, y: 770, w: 120, h: 50, bg: "#1f6feb", stroke: "#58a6ff" },
+      { id: "beam-breaks", name: "Beam Breaks", sub: "IR Ball Detect Sensor", zone: "turret", x: 1030, y: 690, w: 120, h: 50, bg: "#8957e5", stroke: "#a371f7" },
+
+      // Vision & High Compute Subsystems (Mounted on Turret)
+      { id: "buck-converter", name: "Buck Converter", sub: "24V to 19V / 12V 10A", zone: "compute", x: 860, y: 520, w: 130, h: 60, bg: "#1f6feb", stroke: "#58a6ff" },
+      { id: "jetson", name: "Jetson Orin Nano", sub: "Edge AI Auto-Aim Compute", zone: "compute", x: 1030, y: 520, w: 150, h: 75, bg: "#1f6feb", stroke: "#58a6ff" },
+      { id: "realsense", name: "Intel RealSense", sub: "RGB-D D435 / D455 Camera", zone: "compute", x: 1040, y: 400, w: 140, h: 60, bg: "#238636", stroke: "#3fb950" },
+      { id: "speed-monitor", name: "Speed Monitor", sub: "Referee Bullet Velocity", zone: "referee", x: 860, y: 390, w: 130, h: 55, bg: "#b62324", stroke: "#ff7b72" },
+      { id: "vtm", name: "VTM Transmitter", sub: "RoboMaster Video TX", zone: "referee", x: 1020, y: 320, w: 130, h: 55, bg: "#9e6a03", stroke: "#d29922" }
+    ];
+
+    // Connection definitions matching user color rules & whiteboard flow
+    const CONNECTIONS = [
+      // XT60 Battery Main
+      { from: "bat", to: "pmm", spec: "xt60-bat", label: "24V Battery Main XT60", routing: "direct" },
+
+      // PMM XT30 Outputs
+      { from: "pmm", to: "current-sensor", spec: "xt30-pwr", label: "24V PMM Out", routing: "orthogonal", p1: [245, 220], p2: [245, 270] },
+      { from: "current-sensor", to: "breakout-chassis", spec: "xt30-pwr", label: "Chassis 24V Bus", routing: "direct" },
+      { from: "breakout-chassis", to: "c620-wheel", spec: "xt30-pwr", label: "24V High Current ESC Bus", routing: "direct" },
+      { from: "pmm", to: "yaw-motor", spec: "xt30-pwr", label: "24V Gimbal Yaw XT30", routing: "orthogonal", p1: [320, 130], p2: [320, 100], p3: [630, 100], p4: [630, 130] },
+      { from: "pmm", to: "feed-motor", spec: "xt30-pwr", label: "24V Feed XT30", routing: "orthogonal", p1: [340, 130], p2: [340, 115], p3: [670, 115], p4: [670, 220] },
+      { from: "pmm", to: "mcb-a", spec: "xt30-pwr", label: "24V MCB-A Power", routing: "orthogonal", p1: [360, 200], p2: [440, 200], p3: [440, 310] },
+
+      // PMM to Slip Ring Chassis (Power lines G, A, PC)
+      { from: "pmm", to: "slip-ring-chassis", spec: "xt30-pwr", label: "Power Pass-thru to Turret (XT30)", routing: "orthogonal", p1: [350, 220], p2: [350, 290], p3: [610, 290], p4: [610, 350] },
+
+      // Slip Ring physical joint
+      { from: "slip-ring-chassis", to: "slip-ring-core", spec: "xt30-pwr", label: "Chassis Harness", routing: "direct" },
+      { from: "slip-ring-core", to: "slip-ring-turret", spec: "xt30-pwr", label: "Turret Harness", routing: "direct" },
+
+      // Turret Power Routing from Slip Ring Turret
+      { from: "slip-ring-turret", to: "turret-breakout", spec: "xt30-pwr", label: "Turret 24V Distribution XT30", routing: "orthogonal", p1: [620, 585], p2: [620, 660] },
+      { from: "slip-ring-turret", to: "buck-converter", spec: "xt30-pwr", label: "24V Buck Input XT30", routing: "orthogonal", p1: [770, 550], p2: [860, 550] },
+      { from: "buck-converter", to: "jetson", spec: "xt30-pwr", label: "19V High Current Power", routing: "direct" },
+      { from: "turret-breakout", to: "pitch-motor", spec: "xt30-pwr", label: "24V Pitch Motor XT30", routing: "direct" },
+      { from: "turret-breakout", to: "c610-kicker", spec: "xt30-pwr", label: "24V Kicker ESC XT30", routing: "direct" },
+      { from: "turret-breakout", to: "flywheel-c620", spec: "xt30-pwr", label: "24V Flywheel ESCs (x4)", routing: "direct" },
+      { from: "turret-breakout", to: "mcb-c", spec: "xt30-pwr", label: "Turret MCB 24V Power", routing: "orthogonal", p1: [760, 710], p2: [840, 710] },
+
+      // CAN Buses
+      // CAN 1 (Chassis Main)
+      { from: "mcb-a", to: "yaw-motor", spec: "jst-2pin-can", label: "CAN 1 (Yaw Control)", routing: "orthogonal", p1: [480, 310], p2: [480, 160], p3: [580, 160] },
+      { from: "mcb-a", to: "feed-motor", spec: "jst-2pin-can", label: "CAN 1 (Feed Control)", routing: "orthogonal", p1: [510, 310], p2: [510, 250], p3: [600, 250] },
+      { from: "mcb-a", to: "slip-ring-chassis", spec: "jst-2pin-can", label: "CAN 1 (To Slip Ring)", routing: "orthogonal", p1: [560, 310], p2: [560, 335], p3: [670, 335], p4: [670, 350] },
+      { from: "slip-ring-turret", to: "mcb-c", spec: "jst-2pin-can", label: "CAN 1 (Turret Pass-thru)", routing: "orthogonal", p1: [710, 585], p2: [710, 630], p3: [880, 630], p4: [880, 660] },
+
+      // CAN 2 (Chassis Drive ESCs)
+      { from: "mcb-a", to: "breakout-chassis", spec: "jst-4pin-can-pwr", label: "CAN 2 + Low Power (4-Pin)", routing: "orthogonal", p1: [420, 360], p2: [370, 360], p3: [370, 415], p4: [310, 415] },
+      { from: "breakout-chassis", to: "c620-wheel", spec: "jst-2pin-can", label: "CAN 2 Drive Ring (4x ESCs)", routing: "direct" },
+
+      // Turret CAN
+      { from: "turret-breakout", to: "pitch-motor", spec: "jst-2pin-can", label: "CAN (Pitch GM6020)", routing: "orthogonal", p1: [580, 690], p2: [550, 690] },
+      { from: "turret-breakout", to: "c610-kicker", spec: "jst-2pin-can", label: "CAN (Kicker C610)", routing: "orthogonal", p1: [580, 715], p2: [550, 775] },
+      { from: "turret-breakout", to: "flywheel-c620", spec: "jst-2pin-can", label: "CAN (Flywheel 4x C620)", routing: "orthogonal", p1: [670, 730], p2: [670, 780] },
+      { from: "turret-breakout", to: "mcb-c", spec: "jst-2pin-can", label: "CAN Bus Sync", routing: "orthogonal", p1: [750, 675], p2: [840, 675] },
+
+      // Encoders & Sensors
+      { from: "mcb-a", to: "a2z", spec: "jst-4pin-can-pwr", label: "A2Z 4-Pin Link", routing: "direct" },
+      { from: "mcb-a", to: "yaw-encoder", spec: "jst-4pin-can-pwr", label: "Yaw Encoder 4-Pin SSI/CAN", routing: "direct" },
+      { from: "mcb-a", to: "oled", spec: "jst-oled", label: "OLED I2C / SPI Cable", routing: "orthogonal", p1: [440, 405], p2: [440, 520], p3: [420, 520], p4: [420, 550] },
+      { from: "mcb-a", to: "chassis-imu", spec: "dupont-imu-spi", label: "Chassis IMU SPI Dupont", routing: "orthogonal", p1: [430, 405], p2: [350, 405], p3: [350, 765], p4: [290, 765] },
+
+      { from: "mcb-c", to: "gimbal-imu", spec: "dupont-imu-spi", label: "Turret IMU SPI Dupont", routing: "orthogonal", p1: [940, 730], p2: [940, 795], p3: [1030, 795] },
+      { from: "mcb-c", to: "beam-breaks", spec: "jst-uart-3pin", label: "Beam Break IR Input", routing: "orthogonal", p1: [970, 715], p2: [1030, 715] },
+
+      // UART / Host Communication
+      { from: "mcb-a", to: "slip-ring-chassis", spec: "jst-uart-3pin", label: "UART High Speed Telemetry", routing: "orthogonal", p1: [520, 310], p2: [520, 275], p3: [720, 275], p4: [720, 350] },
+      { from: "slip-ring-turret", to: "jetson", spec: "jst-uart-3pin", label: "Chassis UART to Jetson", routing: "orthogonal", p1: [750, 525], p2: [820, 500], p3: [1030, 535] },
+      { from: "jetson", to: "mcb-c", spec: "jst-uart-3pin", label: "Auto-Aim Target UART (Jetson -> Turret)", routing: "orthogonal", p1: [1060, 595], p2: [1060, 645], p3: [970, 645], p4: [970, 660] },
+
+      // Referee Subsystem Wiring
+      { from: "pmm", to: "mcm", spec: "ref-cable", label: "Referee Main Power Cable", routing: "orthogonal", p1: [360, 150], p2: [480, 70], p3: [880, 160] },
+      { from: "mcb-a", to: "mcm", spec: "jst-uart-3pin", label: "Referee Serial UART", routing: "orthogonal", p1: [460, 310], p2: [460, 220], p3: [880, 185] },
+      { from: "mcm", to: "light-bar", spec: "black-ref-cable", label: "Black Ref Cable (Light Bar)", routing: "direct" },
+
+      // Armor plate daisy chain
+      { from: "mcm", to: "armor-1", spec: "jst-armor", label: "Armor 1 Cable (JST 4-Pin)", routing: "orthogonal", p1: [900, 210], p2: [900, 230], p3: [880, 230], p4: [880, 240] },
+      { from: "armor-1", to: "armor-2", spec: "jst-armor", label: "Armor Interlink", routing: "direct" },
+      { from: "armor-2", to: "armor-3", spec: "jst-armor", label: "Armor Interlink", routing: "direct" },
+      { from: "armor-3", to: "armor-4", spec: "jst-armor", label: "Armor Interlink", routing: "direct" },
+
+      // Vision / High Bandwidth USB
+      { from: "jetson", to: "realsense", spec: "usb-ac", label: "USB-A to USB-C (High Speed Point Cloud)", routing: "direct" },
+      { from: "slip-ring-turret", to: "speed-monitor", spec: "ref-cable", label: "Speed Monitor Ref Signal", routing: "orthogonal", p1: [750, 515], p2: [810, 420], p3: [860, 420] },
+      { from: "speed-monitor", to: "vtm", spec: "ref-cable", label: "VTM Video & Data Link", routing: "direct" }
+    ];
+
+    // Subsystem Region Definitions
+    const REGIONS = [
+      { id: "reg-chassis", name: "Chassis Subsystem", x: 30, y: 30, w: 760, h: 785 },
+      { id: "reg-referee", name: "Referee System & Armor Loop", x: 810, y: 30, w: 420, h: 280 },
+      { id: "reg-compute", name: "Vision & Edge AI Auto-Aim", x: 810, y: 330, w: 420, h: 270 },
+      { id: "reg-turret", name: "Turret & Gimbal Subsystem", x: 370, y: 620, w: 860, h: 330 }
+    ];
+
+    // Helper functions for SVG twisted wires
+    function generateTwistedPath(x1, y1, x2, y3) {
+      // Return two interwoven sinusoidal waves along the line
+    }
+
+    // Canvas & Viewport Pan/Zoom state
+    let scale = 0.95;
+    let translateX = 80;
+    let translateY = 40;
+    let isPanning = false;
+    let startX = 0;
+    let startY = 0;
+
+    const viewport = document.getElementById("viewport");
+    const scene = document.getElementById("scene");
+    const detailPanel = document.getElementById("detail-panel");
+    const legendList = document.getElementById("legend-list");
+
+    function updateTransform() {
+      scene.setAttribute("transform", `translate(${translateX}, ${translateY}) scale(${scale})`);
+    }
+
+    // Render Legend
+    function initLegend() {
+      Object.values(WIRE_SPECS).forEach(spec => {
+        const item = document.createElement("div");
+        item.className = "legend-item";
+        item.setAttribute("data-wire-id", spec.id);
+
+        let swatchHtml = "";
+        if (spec.renderStyle === "twisted-pair") {
+          swatchHtml = `<svg class="swatch" viewBox="0 0 30 12">
+            <path d="M 0 4 Q 7 0 15 4 T 30 4" fill="none" stroke="${spec.c1}" stroke-width="2.5" />
+            <path d="M 0 8 Q 7 12 15 8 T 30 8" fill="none" stroke="${spec.c2}" stroke-width="2.5" />
+          </svg>`;
+        } else if (spec.renderStyle === "dual-twisted") {
+          swatchHtml = `<svg class="swatch" viewBox="0 0 30 12">
+            <path d="M 0 3 Q 7 0 15 3 T 30 3" fill="none" stroke="${spec.c1}" stroke-width="1.8" />
+            <path d="M 0 6 Q 7 9 15 6 T 30 6" fill="none" stroke="${spec.c2}" stroke-width="1.8" />
+            <path d="M 0 9 Q 7 6 15 9 T 30 9" fill="none" stroke="${spec.c3}" stroke-width="1.8" />
+          </svg>`;
+        } else {
+          swatchHtml = `<svg class="swatch" viewBox="0 0 30 12">
+            <line x1="0" y1="6" x2="30" y2="6" stroke="${spec.stroke}" stroke-width="${spec.width || 3}" />
+          </svg>`;
+        }
+
+        item.innerHTML = `${swatchHtml}<span>${spec.name}</span>`;
+        item.addEventListener("click", () => {
+          showDetailModal(spec);
+          highlightWires(spec.id);
+        });
+        legendList.appendChild(item);
+      });
+    }
+
+    // Compute center anchor of module
+    function getModuleAnchor(modId, side = "center") {
+      const mod = MODULES.find(m => m.id === modId);
+      if (!mod) return { x: 0, y: 0 };
+      switch (side) {
+        case "top": return { x: mod.x + mod.w / 2, y: mod.y };
+        case "bottom": return { x: mod.x + mod.w / 2, y: mod.y + mod.h };
+        case "left": return { x: mod.x, y: mod.y + mod.h / 2 };
+        case "right": return { x: mod.x + mod.w, y: mod.y + mod.h / 2 };
+        default: return { x: mod.x + mod.w / 2, y: mod.y + mod.h / 2 };
+      }
+    }
+
+    // Path Builders for Straight, Orthogonal and Twisted Wires
+    function buildPathD(pts) {
+      if (pts.length === 0) return "";
+      return "M " + pts.map(p => `${p[0]} ${p[1]}`).join(" L ");
+    }
+
+    // Render Boundary Regions
+    function renderRegions() {
+      const layer = document.getElementById("boundaries-layer");
+      REGIONS.forEach(reg => {
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.innerHTML = `
+          <rect class="section-boundary" x="${reg.x}" y="${reg.y}" width="${reg.w}" height="${reg.h}"></rect>
+          <text class="section-title" x="${reg.x + 18}" y="${reg.y + 26}">${reg.name}</text>
+        `;
+        layer.appendChild(g);
+      });
+    }
+
+    // Render Wires with Twisted Styles & Interactive Hits
+    function renderWires() {
+      const layer = document.getElementById("wires-layer");
+
+      CONNECTIONS.forEach((conn, index) => {
+        const spec = WIRE_SPECS[conn.spec];
+        const fromMod = MODULES.find(m => m.id === conn.from);
+        const toMod = MODULES.find(m => m.id === conn.to);
+        if (!fromMod || !toMod) return;
+
+        let points = [];
+        if (conn.routing === "orthogonal" && conn.p1) {
+          const startPt = [fromMod.x + fromMod.w / 2, fromMod.y + fromMod.h / 2];
+          points.push(startPt);
+          if (conn.p1) points.push(conn.p1);
+          if (conn.p2) points.push(conn.p2);
+          if (conn.p3) points.push(conn.p3);
+          if (conn.p4) points.push(conn.p4);
+          points.push([toMod.x + toMod.w / 2, toMod.y + toMod.h / 2]);
+        } else {
+          // Direct straight connection
+          points = [
+            [fromMod.x + fromMod.w / 2, fromMod.y + fromMod.h / 2],
+            [toMod.x + toMod.w / 2, toMod.y + toMod.h / 2]
+          ];
+        }
+
+        const pathD = buildPathD(points);
+
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.classList.add("wire-group");
+        g.setAttribute("data-wire-id", spec.id);
+
+        let renderContent = "";
+
+        if (spec.renderStyle === "twisted-pair") {
+          // Twisted White & Red or Yellow & Gray
+          renderContent = `
+            <path class="wire-render" d="${pathD}" stroke="${spec.c1}" stroke-width="${spec.width + 1}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <path class="wire-render" d="${pathD}" stroke="${spec.c2}" stroke-width="${spec.width}" stroke-dasharray="8 8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          `;
+        } else if (spec.renderStyle === "dual-twisted") {
+          // 4-pin CAN: 2 twisted pairs
+          renderContent = `
+            <path class="wire-render" d="${pathD}" stroke="${spec.c1}" stroke-width="${spec.width + 2}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <path class="wire-render" d="${pathD}" stroke="${spec.c2}" stroke-width="${spec.width + 0.5}" stroke-dasharray="6 6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <path class="wire-render" d="${pathD}" stroke="${spec.c3}" stroke-width="${spec.width - 0.5}" stroke-dasharray="12 12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          `;
+        } else {
+          // Solid wire (straight or orthogonal)
+          renderContent = `
+            <path class="wire-render" d="${pathD}" stroke="${spec.stroke}" stroke-width="${spec.width}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          `;
+        }
+
+        // Invisible wider stroke for easy click & hover hitbox
+        renderContent += `<path class="wire-hitbox" d="${pathD}" />`;
+
+        // Midpoint label
+        if (conn.label && points.length >= 2) {
+          const midIdx = Math.floor(points.length / 2);
+          const pA = points[midIdx - 1];
+          const pB = points[midIdx];
+          const mx = (pA[0] + pB[0]) / 2;
+          const my = (pA[1] + pB[1]) / 2 - 6;
+          renderContent += `<text class="wire-label" x="${mx}" y="${my}" text-anchor="middle">${conn.label}</text>`;
+        }
+
+        g.innerHTML = renderContent;
+
+        // Click to view details
+        g.addEventListener("click", (e) => {
+          e.stopPropagation();
+          showDetailModal(spec, conn);
+          highlightWires(spec.id);
+        });
+
+        layer.appendChild(g);
+      });
+    }
+
+    // Render Modules
+    function renderModules() {
+      const layer = document.getElementById("modules-layer");
+      MODULES.forEach(mod => {
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.innerHTML = `
+          <rect class="module-box" x="${mod.x}" y="${mod.y}" width="${mod.w}" height="${mod.h}" fill="${mod.bg}" stroke="${mod.stroke}" />
+          <text class="module-title" x="${mod.x + mod.w / 2}" y="${mod.y + mod.h / 2 - 3}" text-anchor="middle">${mod.name}</text>
+          <text class="module-sub" x="${mod.x + mod.w / 2}" y="${mod.y + mod.h / 2 + 13}" text-anchor="middle">${mod.sub}</text>
+        `;
+
+        g.addEventListener("click", (e) => {
+          e.stopPropagation();
+          showModuleModal(mod);
+        });
+
+        layer.appendChild(g);
+      });
+    }
+
+    // Highlighting wires by ID
+    function highlightWires(wireId) {
+      document.querySelectorAll(".wire-group").forEach(el => {
+        if (el.getAttribute("data-wire-id") === wireId) {
+          el.classList.add("active");
+        } else {
+          el.classList.remove("active");
+        }
+      });
+
+      document.querySelectorAll(".legend-item").forEach(el => {
+        if (el.getAttribute("data-wire-id") === wireId) {
+          el.classList.add("active");
+        } else {
+          el.classList.remove("active");
+        }
+      });
+    }
+
+    // Show Detail Modal
+    function showDetailModal(spec, conn) {
+      document.getElementById("panel-title").innerText = spec.name;
+      document.getElementById("panel-sub").innerText = spec.type;
+
+      let bodyHtml = `
+        <div class="detail-row">
+          <span class="label">Color Coding & Appearance</span>
+          <span class="value">${spec.colorDesc}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Wire Gauge & Spec</span>
+          <span class="value">${spec.gauge}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Connector Family</span>
+          <span class="value">${spec.connector}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Crimp & Terminal Info</span>
+          <span class="value">${spec.crimp}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Protocol & Electrical Ratings</span>
+          <span class="value">${spec.protocol}</span>
+        </div>
+      `;
+
+      if (conn) {
+        bodyHtml += `
+          <div style="border-top: 1px solid var(--panel-border); margin: 12px 0; padding-top: 8px;">
+            <div class="detail-row">
+              <span class="label">Selected Connection</span>
+              <span class="value"><strong>${conn.from}</strong> ➔ <strong>${conn.to}</strong> (${conn.label})</span>
+            </div>
+          </div>
+        `;
+      }
+
+      document.getElementById("panel-body").innerHTML = bodyHtml;
+      detailPanel.style.display = "block";
+    }
+
+    // Show Module Info Modal
+    function showModuleModal(mod) {
+      document.getElementById("panel-title").innerText = mod.name;
+      document.getElementById("panel-sub").innerText = `Subsystem: ${mod.zone.toUpperCase()} • ${mod.sub}`;
+
+      const connectedWires = CONNECTIONS.filter(c => c.from === mod.id || c.to === mod.id);
+
+      let linksHtml = connectedWires.map(c => {
+        const spec = WIRE_SPECS[c.spec];
+        const isFrom = c.from === mod.id;
+        const target = isFrom ? c.to : c.from;
+        const dir = isFrom ? "➔ Out to" : "⬅ In from";
+        return `<div class="tag" style="display:block; margin-bottom:5px;">${dir} <strong>${target}</strong>: ${spec.name} (${c.label})</div>`;
+      }).join("");
+
+      document.getElementById("panel-body").innerHTML = `
+        <div class="detail-row">
+          <span class="label">Description</span>
+          <span class="value">${mod.name} (${mod.sub})</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Connected Harnesses (${connectedWires.length})</span>
+          <div style="margin-top: 8px;">${linksHtml || "No direct links recorded"}</div>
+        </div>
+      `;
+      detailPanel.style.display = "block";
+    }
+
+    // Modal close
+    document.getElementById("close-detail").addEventListener("click", () => {
+      detailPanel.style.display = "none";
+      highlightWires(null);
+    });
+
+    // Pan and Zoom Event Handlers
+    viewport.addEventListener("mousedown", (e) => {
+      if (e.button === 0) { // Left click
+        isPanning = true;
+        startX = e.clientX - translateX;
+        startY = e.clientY - translateY;
+        viewport.classList.add("panning");
+      }
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isPanning) return;
+      translateX = e.clientX - startX;
+      translateY = e.clientY - startY;
+      updateTransform();
+    });
+
+    window.addEventListener("mouseup", () => {
+      isPanning = false;
+      viewport.classList.remove("panning");
+    });
+
+    // Zoom on wheel scroll
+    viewport.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const zoomFactor = 1.12;
+      const mouseX = e.clientX;
+      const mouseY = e.clientY;
+
+      const prevScale = scale;
+      if (e.deltaY < 0) {
+        scale = Math.min(scale * zoomFactor, 4.0); // Zoom in
+      } else {
+        scale = Math.max(scale / zoomFactor, 0.25); // Zoom out
+      }
+
+      // Zoom towards mouse position
+      translateX = mouseX - (mouseX - translateX) * (scale / prevScale);
+      translateY = mouseY - (mouseY - translateY) * (scale / prevScale);
+      updateTransform();
+    }, { passive: false });
+
+    // Buttons
+    document.getElementById("btn-reset").addEventListener("click", () => {
+      scale = 0.95;
+      translateX = 80;
+      translateY = 40;
+      updateTransform();
+    });
+
+    document.getElementById("btn-fit").addEventListener("click", () => {
+      scale = 0.72;
+      translateX = 50;
+      translateY = 30;
+      updateTransform();
+    });
+
+    // Close panel when clicking background
+    viewport.addEventListener("click", (e) => {
+      if (e.target.id === "viewport" || e.target.id === "canvas" || e.target.tagName === "rect" && e.target.getAttribute("fill")?.includes("grid")) {
+        detailPanel.style.display = "none";
+        highlightWires(null);
+      }
+    });
+
+    // Initialize View
+    initLegend();
+    renderRegions();
+    renderWires();
+    renderModules();
+    updateTransform();
+  </script>
+</body>
+</html>

@@ -6,9 +6,9 @@
   <title>Hero Robot Wiring Architecture & Diagram</title>
   <style>
     :root {
-      --bg: #090d13;
-      --panel-bg: rgba(18, 23, 31, 0.95);
-      --panel-border: #283344;
+      --bg: #070a0f;
+      --panel-bg: rgba(14, 19, 27, 0.96);
+      --panel-border: #232d3d;
       --text-main: #f0f6fc;
       --text-muted: #8b9bb4;
       --accent: #58a6ff;
@@ -30,13 +30,13 @@
       height: 100vh;
     }
 
-    /* Header Bar */
+    /* Top Bar */
     header {
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
-      height: 52px;
+      height: 50px;
       background: var(--panel-bg);
       border-bottom: 1px solid var(--panel-border);
       display: flex;
@@ -48,7 +48,7 @@
     }
 
     header h1 {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
       display: flex;
       align-items: center;
@@ -63,7 +63,6 @@
       color: #58a6ff;
       padding: 2px 8px;
       border-radius: 12px;
-      font-weight: normal;
     }
 
     .header-controls {
@@ -75,8 +74,8 @@
     }
 
     .btn {
-      background: #1b2330;
-      border: 1px solid #303d52;
+      background: #161e2b;
+      border: 1px solid #28374d;
       color: var(--text-main);
       padding: 5px 12px;
       border-radius: 6px;
@@ -86,11 +85,10 @@
     }
 
     .btn:hover {
-      background: #273447;
+      background: #243247;
       border-color: #58a6ff;
     }
 
-    /* Diagram Canvas Container */
     #viewport {
       width: 100vw;
       height: 100vh;
@@ -111,7 +109,7 @@
       transform-origin: 0 0;
     }
 
-    /* SVG Modules / Blocks */
+    /* Modules */
     .module-box {
       rx: 6;
       stroke-width: 1.8;
@@ -125,13 +123,13 @@
     }
 
     .module-title {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
       fill: #ffffff;
       pointer-events: none;
     }
 
-    .pmm-inner-label {
+    .pin-label {
       font-size: 11px;
       font-weight: 600;
       fill: #c9d8ec;
@@ -145,7 +143,7 @@
 
     .wire-hitbox {
       stroke: transparent;
-      stroke-width: 14px;
+      stroke-width: 16px;
       fill: none;
       cursor: pointer;
     }
@@ -198,7 +196,7 @@
     }
 
     .legend-item:hover {
-      background: #1e2838;
+      background: #1b2433;
     }
 
     .legend-item.active {
@@ -207,7 +205,7 @@
     }
 
     .swatch {
-      width: 32px;
+      width: 34px;
       height: 12px;
       display: flex;
       align-items: center;
@@ -291,15 +289,15 @@
       display: inline-block;
       padding: 3px 8px;
       border-radius: 4px;
-      background: #222d3e;
+      background: #1f2a3c;
       font-size: 11px;
       margin-right: 5px;
       margin-top: 4px;
-      border: 1px solid #2d3b52;
+      border: 1px solid #28374d;
     }
 
     .bg-dots {
-      fill: #192231;
+      fill: #151d29;
     }
   </style>
 </head>
@@ -351,20 +349,20 @@
         <!-- Infinite Grid Background Layer -->
         <rect x="-10000" y="-10000" width="20000" height="20000" fill="url(#grid-dots)" />
 
-        <!-- Boundaries Layer (Empty of line labels) -->
+        <!-- Slipring Boundary Line Layer -->
         <g id="boundaries-layer"></g>
 
         <!-- Wires / Cables Layer -->
         <g id="wires-layer"></g>
 
-        <!-- Modules / Electronic Boards Layer -->
+        <!-- Modules Layer -->
         <g id="modules-layer"></g>
       </g>
     </svg>
   </div>
 
   <script>
-    // Wire Specifications with exact Key & Color definitions
+    // Wire Specifications with accurate colors and properties
     const WIRE_SPECS = {
       "xt60-pwr": {
         id: "xt60-pwr",
@@ -391,6 +389,8 @@
         renderStyle: "twisted-pair",
         c1: "#e3b341", // Yellow
         c2: "#8b949e", // Gray
+        amp: 3.0,
+        wl: 24,
         width: 2.2
       },
       "can1-2p": {
@@ -405,6 +405,8 @@
         renderStyle: "twisted-pair",
         c1: "#ffffff", // White
         c2: "#f85149", // Red
+        amp: 3.0,
+        wl: 24,
         width: 2.2
       },
       "can2-2p": {
@@ -419,6 +421,8 @@
         renderStyle: "twisted-pair",
         c1: "#ff7b72",
         c2: "#a81d24",
+        amp: 3.0,
+        wl: 24,
         width: 2.2
       },
       "can-4p": {
@@ -608,284 +612,304 @@
       }
     };
 
-    // Wide, spacious layout coordinates (Pure horizontal & vertical routing)
-    // Upper Robot: Y < 450
-    // Slipring: Y = 460 to 520
-    // Lower Robot: Y > 530
+    // Spacious layout geometry matching the user's sketch:
+    // Center spine: Upper Slipring Breakout (X=680, Y=250), Slipring (X=730, Y=440), Lower Slipring Breakout (X=680, Y=530), PMM (X=700, Y=780)
+    // Left Upper: Turret Breakout (X=180, Y=160), CAN Breakout (X=230, Y=270), 4 C620s & 4 3508s (X=140/270, Y=370..550)
+    // Right Upper: MCB Type C (X=680, Y=80), Jetson (X=1150, Y=140), RealSense (X=1350, Y=70), Pitch 6020 (X=1200, Y=300), Speed Monitor (X=1150, Y=380), VTM (X=1200, Y=440)
+    // Left Lower: MCB Type A (X=260, Y=620), IMU & OLED (X=110, Y=600/670)
+    // Right Lower: Agitator & Yaw (X=1100/1260, Y=530..620), Drive 4x C620 & 4x 3508 (X=1020..1380, Y=700/780), Current Sensor & Chassis Breakout (X=980/1150, Y=870), Referee (X=1020..1300, Y=950..1060)
     const MODULES = [
       // ==========================================
-      // UPPER ROBOT MODULES (Y <= 420)
+      // UPPER ROBOT MODULES (Strictly Y <= 410)
       // ==========================================
-      { id: "kicker-2006", name: "Kicker 2006", x: 140, y: 50, w: 130, h: 48, bg: "#21262d", stroke: "#484f58" },
-      { id: "kicker-c610", name: "Kicker C610", x: 380, y: 50, w: 130, h: 48, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "kicker-2006", name: "Kicker 2006", x: 180, y: 50, w: 140, h: 48, bg: "#21262d", stroke: "#484f58" },
+      { id: "kicker-c610", name: "Kicker C610", x: 420, y: 50, w: 130, h: 48, bg: "#9e6a03", stroke: "#d29922" },
 
-      { id: "turret-breakout", name: "Turret Breakout", x: 140, y: 150, w: 220, h: 80, bg: "#8957e5", stroke: "#a371f7" },
-      { id: "upper-can-breakout", name: "CAN Breakout", x: 200, y: 260, w: 150, h: 55, bg: "#8957e5", stroke: "#a371f7" },
+      { id: "turret-breakout", name: "Turret Breakout", x: 180, y: 150, w: 230, h: 80, bg: "#8957e5", stroke: "#a371f7" },
+      { id: "upper-can-breakout", name: "CAN Breakout", x: 230, y: 260, w: 150, h: 50, bg: "#8957e5", stroke: "#a371f7" },
 
-      // Upper 4 separate C620s and 4 separate 3508s (stacked vertically to the left)
-      { id: "upper-c620-1", name: "C620", x: 100, y: 350, w: 75, h: 36, bg: "#9e6a03", stroke: "#d29922" },
-      { id: "upper-3508-1", name: "3508", x: 210, y: 350, w: 75, h: 36, bg: "#21262d", stroke: "#484f58" },
+      // Upper 4 separate C620s and 4 separate 3508s
+      { id: "upper-c620-1", name: "C620", x: 130, y: 340, w: 75, h: 36, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "upper-3508-1", name: "3508", x: 250, y: 340, w: 75, h: 36, bg: "#21262d", stroke: "#484f58" },
 
-      { id: "upper-c620-2", name: "C620", x: 100, y: 395, w: 75, h: 36, bg: "#9e6a03", stroke: "#d29922" },
-      { id: "upper-3508-2", name: "3508", x: 210, y: 395, w: 75, h: 36, bg: "#21262d", stroke: "#484f58" },
+      { id: "upper-c620-2", name: "C620", x: 130, y: 390, w: 75, h: 36, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "upper-3508-2", name: "3508", x: 250, y: 390, w: 75, h: 36, bg: "#21262d", stroke: "#484f58" },
 
-      { id: "upper-c620-3", name: "C620", x: 100, y: 440, w: 75, h: 36, bg: "#9e6a03", stroke: "#d29922" },
-      { id: "upper-3508-3", name: "3508", x: 210, y: 440, w: 75, h: 36, bg: "#21262d", stroke: "#484f58" },
+      { id: "upper-c620-3", name: "C620", x: 130, y: 440, w: 75, h: 36, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "upper-3508-3", name: "3508", x: 250, y: 440, w: 75, h: 36, bg: "#21262d", stroke: "#484f58" },
 
-      { id: "upper-c620-4", name: "C620", x: 100, y: 485, w: 75, h: 36, bg: "#9e6a03", stroke: "#d29922" },
-      { id: "upper-3508-4", name: "3508", x: 210, y: 485, w: 75, h: 36, bg: "#21262d", stroke: "#484f58" },
+      { id: "upper-c620-4", name: "C620", x: 130, y: 490, w: 75, h: 36, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "upper-3508-4", name: "3508", x: 250, y: 490, w: 75, h: 36, bg: "#21262d", stroke: "#484f58" },
 
-      { id: "mcb-type-c", name: "MCB Type C", x: 580, y: 120, w: 180, h: 80, bg: "#238636", stroke: "#3fb950" },
-      { id: "upper-imu", name: "IMU", x: 880, y: 60, w: 90, h: 42, bg: "#1f6feb", stroke: "#58a6ff" },
+      { id: "mcb-type-c", name: "MCB Type C", x: 670, y: 70, w: 200, h: 80, bg: "#238636", stroke: "#3fb950" },
+      { id: "upper-imu", name: "IMU", x: 1040, y: 50, w: 90, h: 42, bg: "#1f6feb", stroke: "#58a6ff" },
 
-      { id: "realsense", name: "RealSense", x: 1080, y: 60, w: 130, h: 48, bg: "#238636", stroke: "#3fb950" },
-      { id: "jetson", name: "Jetson", x: 920, y: 140, w: 150, h: 65, bg: "#1f6feb", stroke: "#58a6ff" },
-      { id: "buck-converter", name: "Buck 24-5V", x: 920, y: 240, w: 140, h: 48, bg: "#1f6feb", stroke: "#58a6ff" },
+      { id: "realsense", name: "RealSense", x: 1330, y: 50, w: 130, h: 48, bg: "#238636", stroke: "#3fb950" },
+      { id: "jetson", name: "Jetson", x: 1140, y: 130, w: 150, h: 65, bg: "#1f6feb", stroke: "#58a6ff" },
+      { id: "buck-converter", name: "Buck 24-5V", x: 1140, y: 225, w: 140, h: 48, bg: "#1f6feb", stroke: "#58a6ff" },
 
-      { id: "pitch-6020", name: "Pitch 6020", x: 1040, y: 320, w: 130, h: 48, bg: "#9e6a03", stroke: "#d29922" },
-      { id: "speed-monitor", name: "Speed Monitor", x: 980, y: 390, w: 140, h: 44, bg: "#b62324", stroke: "#ff7b72" },
-      { id: "vtm", name: "VTM", x: 1030, y: 450, w: 110, h: 44, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "pitch-6020", name: "Pitch 6020", x: 1250, y: 300, w: 130, h: 48, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "speed-monitor", name: "Speed Monitor", x: 1190, y: 375, w: 140, h: 44, bg: "#b62324", stroke: "#ff7b72" },
+      { id: "vtm", name: "VTM", x: 1240, y: 435, w: 110, h: 44, bg: "#9e6a03", stroke: "#d29922" },
 
       // Upper Slipring Breakout
-      { id: "upper-slipring-breakout", name: "Upper Slipring Breakout", x: 530, y: 280, w: 290, h: 100, bg: "#b62324", stroke: "#ff7b72" },
+      {
+        id: "upper-slipring-breakout",
+        name: "Upper Slipring Breakout",
+        x: 630, y: 240, w: 320, h: 140,
+        bg: "#b62324", stroke: "#ff7b72",
+        isUpperBreakout: true
+      },
 
       // ==========================================
-      // SLIPRING (Clean dedicated middle module)
-      // Y = 430 to 480
+      // SLIPRING (Centered, strictly at Y = 460 to 510)
       // ==========================================
-      { id: "slipring", name: "Slipring", x: 600, y: 420, w: 150, h: 50, bg: "#30363d", stroke: "#e3b341" },
+      { id: "slipring", name: "Slipring", x: 720, y: 450, w: 140, h: 50, bg: "#30363d", stroke: "#e3b341" },
 
       // ==========================================
-      // LOWER ROBOT MODULES (Y >= 510)
+      // LOWER ROBOT MODULES (Strictly Y >= 530)
       // ==========================================
       // Lower Slipring Breakout
-      { id: "lower-slipring-breakout", name: "Lower Slipring Breakout", x: 530, y: 510, w: 290, h: 100, bg: "#b62324", stroke: "#ff7b72" },
+      {
+        id: "lower-slipring-breakout",
+        name: "Lower Slipring Breakout",
+        x: 630, y: 535, w: 320, h: 140,
+        bg: "#b62324", stroke: "#ff7b72",
+        isLowerBreakout: true
+      },
 
-      { id: "mcb-type-a", name: "MCB Type A", x: 220, y: 530, w: 180, h: 90, bg: "#238636", stroke: "#3fb950" },
-      { id: "chassis-imu", name: "IMU", x: 80, y: 530, w: 85, h: 42, bg: "#1f6feb", stroke: "#58a6ff" },
-      { id: "oled", name: "OLED", x: 80, y: 600, w: 85, h: 42, bg: "#1f6feb", stroke: "#58a6ff" },
+      { id: "mcb-type-a", name: "MCB Type A", x: 260, y: 560, w: 200, h: 90, bg: "#238636", stroke: "#3fb950" },
+      { id: "chassis-imu", name: "IMU", x: 110, y: 560, w: 85, h: 42, bg: "#1f6feb", stroke: "#58a6ff" },
+      { id: "oled", name: "OLED", x: 110, y: 630, w: 85, h: 42, bg: "#1f6feb", stroke: "#58a6ff" },
 
-      // Both are Y Split
-      { id: "y-split-ammoboost", name: "Y Split", x: 490, y: 660, w: 75, h: 38, bg: "#8957e5", stroke: "#a371f7" },
-      { id: "y-split-gimbal", name: "Y Split", x: 630, y: 660, w: 75, h: 38, bg: "#8957e5", stroke: "#a371f7" },
+      // Y Splits
+      { id: "y-split-ammoboost", name: "Y Split", x: 670, y: 710, w: 75, h: 36, bg: "#8957e5", stroke: "#a371f7" },
+      { id: "y-split-gimbal", name: "Y Split", x: 790, y: 710, w: 75, h: 36, bg: "#8957e5", stroke: "#a371f7" },
 
       // Agitator & Yaw Motors on Chassis
-      { id: "agitator-c620", name: "Agitator C620", x: 890, y: 520, w: 105, h: 42, bg: "#9e6a03", stroke: "#d29922" },
-      { id: "agitator-3508", name: "Agitator 3508", x: 1040, y: 520, w: 105, h: 42, bg: "#21262d", stroke: "#484f58" },
-      { id: "yaw-c620", name: "Yaw C620", x: 890, y: 590, w: 105, h: 42, bg: "#9e6a03", stroke: "#d29922" },
-      { id: "yaw-3508", name: "Yaw 3508", x: 1040, y: 590, w: 105, h: 42, bg: "#21262d", stroke: "#484f58" },
+      { id: "agitator-c620", name: "Agitator C620", x: 1080, y: 540, w: 110, h: 42, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "agitator-3508", name: "Agitator 3508", x: 1240, y: 540, w: 110, h: 42, bg: "#21262d", stroke: "#484f58" },
+      { id: "yaw-c620", name: "Yaw C620", x: 1080, y: 615, w: 110, h: 42, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "yaw-3508", name: "Yaw 3508", x: 1240, y: 615, w: 110, h: 42, bg: "#21262d", stroke: "#484f58" },
 
-      // Chassis 4 Drive ESCs (C620) & 4 Motors (3508) - Orient to the right
-      { id: "drive-3508-1", name: "3508", x: 830, y: 680, w: 70, h: 40, bg: "#21262d", stroke: "#484f58" },
-      { id: "drive-3508-2", name: "3508", x: 920, y: 680, w: 70, h: 40, bg: "#21262d", stroke: "#484f58" },
-      { id: "drive-3508-3", name: "3508", x: 1010, y: 680, w: 70, h: 40, bg: "#21262d", stroke: "#484f58" },
-      { id: "drive-3508-4", name: "3508", x: 1100, y: 680, w: 70, h: 40, bg: "#21262d", stroke: "#484f58" },
+      // Chassis 4 Drive ESCs (C620) & 4 Motors (3508)
+      { id: "drive-3508-1", name: "3508", x: 1020, y: 700, w: 70, h: 40, bg: "#21262d", stroke: "#484f58" },
+      { id: "drive-3508-2", name: "3508", x: 1110, y: 700, w: 70, h: 40, bg: "#21262d", stroke: "#484f58" },
+      { id: "drive-3508-3", name: "3508", x: 1200, y: 700, w: 70, h: 40, bg: "#21262d", stroke: "#484f58" },
+      { id: "drive-3508-4", name: "3508", x: 1290, y: 700, w: 70, h: 40, bg: "#21262d", stroke: "#484f58" },
 
-      { id: "drive-c620-1", name: "C620", x: 830, y: 750, w: 70, h: 40, bg: "#9e6a03", stroke: "#d29922" },
-      { id: "drive-c620-2", name: "C620", x: 920, y: 750, w: 70, h: 40, bg: "#9e6a03", stroke: "#d29922" },
-      { id: "drive-c620-3", name: "C620", x: 1010, y: 750, w: 70, h: 40, bg: "#9e6a03", stroke: "#d29922" },
-      { id: "drive-c620-4", name: "C620", x: 1100, y: 750, w: 70, h: 40, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "drive-c620-1", name: "C620", x: 1020, y: 770, w: 70, h: 40, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "drive-c620-2", name: "C620", x: 1110, y: 770, w: 70, h: 40, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "drive-c620-3", name: "C620", x: 1200, y: 770, w: 70, h: 40, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "drive-c620-4", name: "C620", x: 1290, y: 770, w: 70, h: 40, bg: "#9e6a03", stroke: "#d29922" },
 
       // Current Sensor & Chassis Breakout
-      { id: "current-sensor", name: "Current Sensor", x: 800, y: 835, w: 110, h: 45, bg: "#238636", stroke: "#3fb950" },
-      { id: "chassis-breakout", name: "Chassis Breakout", x: 940, y: 835, w: 130, h: 50, bg: "#8957e5", stroke: "#a371f7" },
+      { id: "current-sensor", name: "Current Sensor", x: 970, y: 855, w: 120, h: 45, bg: "#238636", stroke: "#3fb950" },
+      { id: "chassis-breakout", name: "Chassis Breakout", x: 1130, y: 855, w: 140, h: 50, bg: "#8957e5", stroke: "#a371f7" },
 
-      // PMM with inside labels exactly as drawn
-      { id: "pmm", name: "PMM", x: 450, y: 740, w: 250, h: 175, bg: "#1f6feb", stroke: "#58a6ff", isPMM: true },
+      // PMM
+      {
+        id: "pmm",
+        name: "PMM",
+        x: 620, y: 790, w: 270, h: 185,
+        bg: "#1f6feb", stroke: "#58a6ff",
+        isPMM: true
+      },
 
       // Battery
-      { id: "battery", name: "Battery", x: 510, y: 975, w: 120, h: 50, bg: "#b62324", stroke: "#ff7b72" },
+      { id: "battery", name: "Battery", x: 695, y: 1025, w: 120, h: 50, bg: "#b62324", stroke: "#ff7b72" },
 
       // Referee Subsystem on Lower Robot
-      { id: "mcm", name: "MCM", x: 740, y: 935, w: 75, h: 42, bg: "#9e6a03", stroke: "#d29922" },
-      { id: "rfid", name: "RFID", x: 740, y: 995, w: 75, h: 42, bg: "#8957e5", stroke: "#a371f7" },
-      { id: "lightbar", name: "Lightbar", x: 860, y: 995, w: 120, h: 42, bg: "#30363d", stroke: "#8b949e" },
+      { id: "mcm", name: "MCM", x: 920, y: 955, w: 75, h: 42, bg: "#9e6a03", stroke: "#d29922" },
+      { id: "rfid", name: "RFID", x: 920, y: 1025, w: 75, h: 42, bg: "#8957e5", stroke: "#a371f7" },
+      { id: "lightbar", name: "Lightbar", x: 1040, y: 1025, w: 130, h: 42, bg: "#30363d", stroke: "#8b949e" },
 
-      { id: "armor-1", name: "Armor", x: 850, y: 900, w: 75, h: 38, bg: "#b62324", stroke: "#ff7b72" },
-      { id: "armor-2", name: "Armor", x: 850, y: 948, w: 75, h: 38, bg: "#b62324", stroke: "#ff7b72" },
-      { id: "armor-3", name: "Armor", x: 945, y: 900, w: 75, h: 38, bg: "#b62324", stroke: "#ff7b72" },
-      { id: "armor-4", name: "Armor", x: 945, y: 948, w: 75, h: 38, bg: "#b62324", stroke: "#ff7b72" }
+      { id: "armor-1", name: "Armor", x: 1030, y: 925, w: 75, h: 38, bg: "#b62324", stroke: "#ff7b72" },
+      { id: "armor-2", name: "Armor", x: 1030, y: 975, w: 75, h: 38, bg: "#b62324", stroke: "#ff7b72" },
+      { id: "armor-3", name: "Armor", x: 1135, y: 925, w: 75, h: 38, bg: "#b62324", stroke: "#ff7b72" },
+      { id: "armor-4", name: "Armor", x: 1135, y: 975, w: 75, h: 38, bg: "#b62324", stroke: "#ff7b72" }
     ];
 
-    // Connections (Strictly horizontal and vertical routing, cleanly spaced)
+    // Clean, uncrossed horizontal/vertical traces with PCB bus routing
     const CONNECTIONS = [
       // ==========================================
       // UPPER ROBOT CONNECTIONS
       // ==========================================
       // Kicker 2006 to Kicker C610
-      { from: "kicker-2006", to: "kicker-c610", spec: "c610-2006-pwr", pts: [ [270, 65], [380, 65] ] },
-      { from: "kicker-2006", to: "kicker-c610", spec: "c610-2006-enc", pts: [ [270, 85], [380, 85] ] },
+      { from: "kicker-2006", to: "kicker-c610", spec: "c610-2006-pwr", pts: [ [320, 65], [420, 65] ] },
+      { from: "kicker-2006", to: "kicker-c610", spec: "c610-2006-enc", pts: [ [320, 85], [420, 85] ] },
 
       // Turret Breakout to Kicker C610: XT30 Power & CAN 1
-      { from: "turret-breakout", to: "kicker-c610", spec: "xt30-pwr", pts: [ [330, 150], [330, 115], [420, 115], [420, 98] ] },
-      { from: "turret-breakout", to: "kicker-c610", spec: "can1-2p", pts: [ [350, 150], [350, 115], [460, 115], [460, 98] ] },
+      { from: "turret-breakout", to: "kicker-c610", spec: "xt30-pwr", pts: [ [370, 150], [370, 120], [450, 120], [450, 98] ] },
+      { from: "turret-breakout", to: "kicker-c610", spec: "can1-2p", pts: [ [390, 150], [390, 110], [490, 110], [490, 98] ] },
 
       // Turret Breakout to Upper CAN Breakout (CAN 1 2p)
-      { from: "turret-breakout", to: "upper-can-breakout", spec: "can1-2p", pts: [ [270, 230], [270, 260] ] },
+      { from: "turret-breakout", to: "upper-can-breakout", spec: "can1-2p", pts: [ [300, 230], [300, 260] ] },
 
-      // Turret Breakout to Upper 4x C620 (XT30 Power bus branch)
-      { from: "turret-breakout", to: "upper-c620-1", spec: "xt30-pwr", pts: [ [160, 230], [160, 310], [60, 310], [60, 368], [100, 368] ] },
-      { from: "turret-breakout", to: "upper-c620-2", spec: "xt30-pwr", pts: [ [160, 310], [60, 310], [60, 413], [100, 413] ] },
-      { from: "turret-breakout", to: "upper-c620-3", spec: "xt30-pwr", pts: [ [160, 310], [60, 310], [60, 458], [100, 458] ] },
-      { from: "turret-breakout", to: "upper-c620-4", spec: "xt30-pwr", pts: [ [160, 310], [60, 310], [60, 503], [100, 503] ] },
+      // Turret Breakout to Upper 4x C620 (XT30 Power bus branch down the left)
+      { from: "turret-breakout", to: "upper-c620-1", spec: "xt30-pwr", pts: [ [200, 230], [200, 310], [70, 310], [70, 358], [130, 358] ] },
+      { from: "turret-breakout", to: "upper-c620-2", spec: "xt30-pwr", pts: [ [70, 358], [70, 408], [130, 408] ] },
+      { from: "turret-breakout", to: "upper-c620-3", spec: "xt30-pwr", pts: [ [70, 408], [70, 458], [130, 458] ] },
+      { from: "turret-breakout", to: "upper-c620-4", spec: "xt30-pwr", pts: [ [70, 458], [70, 508], [130, 508] ] },
 
       // Upper CAN Breakout to Upper 4x C620 (CAN 1 2p branch)
-      { from: "upper-can-breakout", to: "upper-c620-1", spec: "can1-2p", pts: [ [200, 290], [80, 290], [80, 360], [100, 360] ] },
-      { from: "upper-can-breakout", to: "upper-c620-2", spec: "can1-2p", pts: [ [80, 290], [80, 405], [100, 405] ] },
-      { from: "upper-can-breakout", to: "upper-c620-3", spec: "can1-2p", pts: [ [80, 290], [80, 450], [100, 450] ] },
-      { from: "upper-can-breakout", to: "upper-c620-4", spec: "can1-2p", pts: [ [80, 290], [80, 495], [100, 495] ] },
+      { from: "upper-can-breakout", to: "upper-c620-1", spec: "can1-2p", pts: [ [230, 285], [95, 285], [95, 348], [130, 348] ] },
+      { from: "upper-can-breakout", to: "upper-c620-2", spec: "can1-2p", pts: [ [95, 348], [95, 398], [130, 398] ] },
+      { from: "upper-can-breakout", to: "upper-c620-3", spec: "can1-2p", pts: [ [95, 398], [95, 448], [130, 448] ] },
+      { from: "upper-can-breakout", to: "upper-c620-4", spec: "can1-2p", pts: [ [95, 448], [95, 498], [130, 498] ] },
 
       // Upper C620s to Upper 3508s (Power & Encoder)
-      { from: "upper-c620-1", to: "upper-3508-1", spec: "c620-3508-pwr", pts: [ [175, 360], [210, 360] ] },
-      { from: "upper-3508-1", to: "upper-c620-1", spec: "encoder-7p", pts: [ [210, 375], [175, 375] ] },
+      { from: "upper-c620-1", to: "upper-3508-1", spec: "c620-3508-pwr", pts: [ [205, 350], [250, 350] ] },
+      { from: "upper-3508-1", to: "upper-c620-1", spec: "encoder-7p", pts: [ [250, 365], [205, 365] ] },
 
-      { from: "upper-c620-2", to: "upper-3508-2", spec: "c620-3508-pwr", pts: [ [175, 405], [210, 405] ] },
-      { from: "upper-3508-2", to: "upper-c620-2", spec: "encoder-7p", pts: [ [210, 420], [175, 420] ] },
+      { from: "upper-c620-2", to: "upper-3508-2", spec: "c620-3508-pwr", pts: [ [205, 400], [250, 400] ] },
+      { from: "upper-3508-2", to: "upper-c620-2", spec: "encoder-7p", pts: [ [250, 415], [205, 415] ] },
 
-      { from: "upper-c620-3", to: "upper-3508-3", spec: "c620-3508-pwr", pts: [ [175, 450], [210, 450] ] },
-      { from: "upper-3508-3", to: "upper-c620-3", spec: "encoder-7p", pts: [ [210, 465], [175, 465] ] },
+      { from: "upper-c620-3", to: "upper-3508-3", spec: "c620-3508-pwr", pts: [ [205, 450], [250, 450] ] },
+      { from: "upper-3508-3", to: "upper-c620-3", spec: "encoder-7p", pts: [ [250, 465], [205, 465] ] },
 
-      { from: "upper-c620-4", to: "upper-3508-4", spec: "c620-3508-pwr", pts: [ [175, 495], [210, 495] ] },
-      { from: "upper-3508-4", to: "upper-c620-4", spec: "encoder-7p", pts: [ [210, 510], [175, 510] ] },
+      { from: "upper-c620-4", to: "upper-3508-4", spec: "c620-3508-pwr", pts: [ [205, 500], [250, 500] ] },
+      { from: "upper-3508-4", to: "upper-c620-4", spec: "encoder-7p", pts: [ [250, 515], [205, 515] ] },
 
       // Turret Breakout to Pitch 6020 (CAN 1 and XT30)
-      { from: "turret-breakout", to: "pitch-6020", spec: "can1-2p", pts: [ [360, 170], [480, 170], [480, 335], [1040, 335] ] },
-      { from: "turret-breakout", to: "pitch-6020", spec: "xt30-pwr", pts: [ [360, 190], [500, 190], [500, 355], [1040, 355] ] },
+      { from: "turret-breakout", to: "pitch-6020", spec: "can1-2p", pts: [ [410, 175], [590, 175], [590, 315], [1250, 315] ] },
+      { from: "turret-breakout", to: "pitch-6020", spec: "xt30-pwr", pts: [ [410, 195], [605, 195], [605, 335], [1250, 335] ] },
 
       // Turret Breakout to MCB Type C (XT30 Power & CAN 1)
-      { from: "turret-breakout", to: "mcb-type-c", spec: "xt30-pwr", pts: [ [360, 150], [580, 150] ] },
-      { from: "turret-breakout", to: "mcb-type-c", spec: "can1-2p", pts: [ [360, 160], [580, 160] ] },
+      { from: "turret-breakout", to: "mcb-type-c", spec: "xt30-pwr", pts: [ [410, 160], [530, 160], [530, 120], [670, 120] ] },
+      { from: "turret-breakout", to: "mcb-type-c", spec: "can1-2p", pts: [ [410, 170], [520, 170], [520, 105], [670, 105] ] },
 
-      // Upper Slipring Breakout to Turret Breakout: CAN1 and XT30 Ammoboost
-      { from: "upper-slipring-breakout", to: "turret-breakout", spec: "can1-2p", pts: [ [530, 310], [420, 310], [420, 210], [360, 210] ] },
-      { from: "upper-slipring-breakout", to: "turret-breakout", spec: "xt30-pwr", pts: [ [530, 330], [440, 330], [440, 220], [360, 220] ] },
+      // Upper Slipring Breakout CAN1 out to Turret Breakout (ONLY CAN output from upper slipring)
+      { from: "upper-slipring-breakout", to: "turret-breakout", spec: "can1-2p", pts: [ [630, 275], [470, 275], [470, 210], [410, 210] ] },
+      // Upper Slipring Breakout Ammoboost XT30 out to Turret Breakout
+      { from: "upper-slipring-breakout", to: "turret-breakout", spec: "xt30-pwr", pts: [ [630, 310], [490, 310], [490, 225], [410, 225] ] },
 
       // MCB Type C to Turret IMU (Straight line SPI)
-      { from: "mcb-type-c", to: "upper-imu", spec: "spi-cable", pts: [ [760, 140], [840, 140], [840, 80], [880, 80] ] },
+      { from: "mcb-type-c", to: "upper-imu", spec: "spi-cable", pts: [ [870, 90], [1040, 90] ] },
 
       // MCB Type C to Jetson (Straight horizontal line UART)
-      { from: "mcb-type-c", to: "jetson", spec: "uart-3w", pts: [ [760, 170], [920, 170] ] },
+      { from: "mcb-type-c", to: "jetson", spec: "uart-3w", pts: [ [870, 145], [1140, 145] ] },
 
       // Jetson to RealSense (USB straight vertical/horizontal)
-      { from: "jetson", to: "realsense", spec: "usb-cable", pts: [ [1000, 140], [1000, 85], [1080, 85] ] },
+      { from: "jetson", to: "realsense", spec: "usb-cable", pts: [ [1240, 130], [1240, 75], [1330, 75] ] },
 
       // Upper Slipring Breakout to Buck 24-5V (XT30 MiniPC)
-      { from: "upper-slipring-breakout", to: "buck-converter", spec: "xt30-pwr", pts: [ [820, 305], [880, 305], [880, 265], [920, 265] ] },
+      { from: "upper-slipring-breakout", to: "buck-converter", spec: "xt30-pwr", pts: [ [950, 275], [1060, 275], [1060, 250], [1140, 250] ] },
 
       // Buck 24-5V to Jetson Power (Straight vertical)
-      { from: "buck-converter", to: "jetson", spec: "xt30-pwr", pts: [ [970, 240], [970, 205] ] },
+      { from: "buck-converter", to: "jetson", spec: "xt30-pwr", pts: [ [1215, 225], [1215, 195] ] },
 
       // Upper Slipring Breakout to Speed Monitor (Ref Cable)
-      { from: "upper-slipring-breakout", to: "speed-monitor", spec: "ref-cable", pts: [ [820, 360], [940, 360], [940, 410], [980, 410] ] },
+      { from: "upper-slipring-breakout", to: "speed-monitor", spec: "ref-cable", pts: [ [950, 350], [1110, 350], [1110, 395], [1190, 395] ] },
       // Speed Monitor to VTM (Ref Cable straight vertical)
-      { from: "speed-monitor", to: "vtm", spec: "ref-cable", pts: [ [1050, 434], [1050, 450] ] },
+      { from: "speed-monitor", to: "vtm", spec: "ref-cable", pts: [ [1260, 419], [1260, 435] ] },
 
       // ==========================================
       // SLIPRING PASSTHROUGHS (Clean, uncrossed vertical lines)
       // ==========================================
-      { from: "upper-slipring-breakout", to: "slipring", spec: "can1-2p", pts: [ [620, 380], [620, 420] ] },
-      { from: "upper-slipring-breakout", to: "slipring", spec: "uart-3w", pts: [ [650, 380], [650, 420] ] },
-      { from: "upper-slipring-breakout", to: "slipring", spec: "xt30-pwr", pts: [ [680, 380], [680, 420] ] },
-      { from: "upper-slipring-breakout", to: "slipring", spec: "ref-cable", pts: [ [710, 380], [710, 420] ] },
+      { from: "upper-slipring-breakout", to: "slipring", spec: "can1-2p", pts: [ [740, 380], [740, 450] ] },
+      { from: "upper-slipring-breakout", to: "slipring", spec: "uart-3w", pts: [ [770, 380], [770, 450] ] },
+      { from: "upper-slipring-breakout", to: "slipring", spec: "xt30-pwr", pts: [ [800, 380], [800, 450] ] },
+      { from: "upper-slipring-breakout", to: "slipring", spec: "ref-cable", pts: [ [830, 380], [830, 450] ] },
 
-      { from: "slipring", to: "lower-slipring-breakout", spec: "can1-2p", pts: [ [620, 470], [620, 510] ] },
-      { from: "slipring", to: "lower-slipring-breakout", spec: "uart-3w", pts: [ [650, 470], [650, 510] ] },
-      { from: "slipring", to: "lower-slipring-breakout", spec: "xt30-pwr", pts: [ [680, 470], [680, 510] ] },
-      { from: "slipring", to: "lower-slipring-breakout", spec: "ref-cable", pts: [ [710, 470], [710, 510] ] },
+      { from: "slipring", to: "lower-slipring-breakout", spec: "can1-2p", pts: [ [740, 500], [740, 535] ] },
+      { from: "slipring", to: "lower-slipring-breakout", spec: "uart-3w", pts: [ [770, 500], [770, 535] ] },
+      { from: "slipring", to: "lower-slipring-breakout", spec: "xt30-pwr", pts: [ [800, 500], [800, 535] ] },
+      { from: "slipring", to: "lower-slipring-breakout", spec: "ref-cable", pts: [ [830, 500], [830, 535] ] },
 
       // ==========================================
       // LOWER ROBOT CONNECTIONS
       // ==========================================
       // Lower Slipring Breakout to MCB Type A (CAN 1 and UART straight horizontal)
-      { from: "lower-slipring-breakout", to: "mcb-type-a", spec: "can1-2p", pts: [ [530, 545], [400, 545] ] },
-      { from: "lower-slipring-breakout", to: "mcb-type-a", spec: "uart-3w", pts: [ [530, 575], [400, 575] ] },
+      { from: "lower-slipring-breakout", to: "mcb-type-a", spec: "can1-2p", pts: [ [630, 565], [460, 565] ] },
+      { from: "lower-slipring-breakout", to: "mcb-type-a", spec: "uart-3w", pts: [ [630, 595], [460, 595] ] },
 
       // MCB Type A to Chassis IMU (Straight line SPI)
-      { from: "mcb-type-a", to: "chassis-imu", spec: "spi-cable", pts: [ [220, 550], [165, 550] ] },
+      { from: "mcb-type-a", to: "chassis-imu", spec: "spi-cable", pts: [ [260, 580], [195, 580] ] },
       // MCB Type A to OLED (Straight line OLED 7p)
-      { from: "mcb-type-a", to: "oled", spec: "oled-7p", pts: [ [220, 615], [165, 615] ] },
+      { from: "mcb-type-a", to: "oled", spec: "oled-7p", pts: [ [260, 645], [195, 645] ] },
 
       // MCB Type A to Agitator C620 and Yaw C620 (CAN 1 2p)
-      { from: "mcb-type-a", to: "agitator-c620", spec: "can1-2p", pts: [ [400, 535], [470, 535], [470, 500], [870, 500], [870, 535], [890, 535] ] },
-      { from: "mcb-type-a", to: "yaw-c620", spec: "can1-2p", pts: [ [400, 555], [450, 555], [450, 490], [855, 490], [855, 605], [890, 605] ] },
+      { from: "mcb-type-a", to: "agitator-c620", spec: "can1-2p", pts: [ [460, 550], [530, 550], [530, 515], [1030, 515], [1030, 550], [1080, 550] ] },
+      { from: "mcb-type-a", to: "yaw-c620", spec: "can1-2p", pts: [ [460, 575], [510, 575], [510, 500], [1045, 500], [1045, 625], [1080, 625] ] },
 
       // Y-Split Ammoboost and Y-Split Gimbal to Agitator C620 and Yaw C620 (Power)
-      { from: "y-split-ammoboost", to: "agitator-c620", spec: "xt30-pwr", pts: [ [565, 675], [780, 675], [780, 545], [890, 545] ] },
-      { from: "y-split-gimbal", to: "yaw-c620", spec: "xt30-pwr", pts: [ [705, 675], [760, 675], [760, 620], [890, 620] ] },
+      { from: "y-split-ammoboost", to: "agitator-c620", spec: "xt30-pwr", pts: [ [745, 725], [970, 725], [970, 565], [1080, 565] ] },
+      { from: "y-split-gimbal", to: "yaw-c620", spec: "xt30-pwr", pts: [ [865, 725], [990, 725], [990, 640], [1080, 640] ] },
 
       // Agitator & Yaw C620s to 3508 Motors (Power & Encoders)
-      { from: "agitator-c620", to: "agitator-3508", spec: "c620-3508-pwr", pts: [ [995, 535], [1040, 535] ] },
-      { from: "agitator-3508", to: "agitator-c620", spec: "encoder-7p", pts: [ [1040, 550], [995, 550] ] },
+      { from: "agitator-c620", to: "agitator-3508", spec: "c620-3508-pwr", pts: [ [1190, 550], [1240, 550] ] },
+      { from: "agitator-3508", to: "agitator-c620", spec: "encoder-7p", pts: [ [1240, 565], [1190, 565] ] },
 
-      { from: "yaw-c620", to: "yaw-3508", spec: "c620-3508-pwr", pts: [ [995, 605], [1040, 605] ] },
-      { from: "yaw-3508", to: "yaw-c620", spec: "encoder-7p", pts: [ [1040, 620], [995, 620] ] },
+      { from: "yaw-c620", to: "yaw-3508", spec: "c620-3508-pwr", pts: [ [1190, 625], [1240, 625] ] },
+      { from: "yaw-3508", to: "yaw-c620", spec: "encoder-7p", pts: [ [1240, 640], [1190, 640] ] },
 
       // Y-Splits to Lower Slipring Breakout
-      { from: "y-split-ammoboost", to: "lower-slipring-breakout", spec: "xt30-pwr", pts: [ [525, 660], [525, 630], [560, 630], [560, 610] ] },
-      { from: "y-split-gimbal", to: "lower-slipring-breakout", spec: "xt30-pwr", pts: [ [665, 660], [665, 630], [600, 630], [600, 610] ] },
+      { from: "y-split-ammoboost", to: "lower-slipring-breakout", spec: "xt30-pwr", pts: [ [705, 710], [705, 675] ] },
+      { from: "y-split-gimbal", to: "lower-slipring-breakout", spec: "xt30-pwr", pts: [ [825, 710], [825, 675] ] },
 
       // MCB Type A to Chassis Breakout (CAN 2 2p)
-      { from: "mcb-type-a", to: "chassis-breakout", spec: "can2-2p", pts: [ [310, 620], [310, 855], [940, 855] ] },
+      { from: "mcb-type-a", to: "chassis-breakout", spec: "can2-2p", pts: [ [360, 650], [360, 875], [1130, 875] ] },
 
       // Chassis Breakout to 4 Drive ESCs (CAN 2 2p)
-      { from: "chassis-breakout", to: "drive-c620-1", spec: "can2-2p", pts: [ [940, 845], [865, 845], [865, 790] ] },
-      { from: "chassis-breakout", to: "drive-c620-2", spec: "can2-2p", pts: [ [955, 835], [955, 790] ] },
-      { from: "chassis-breakout", to: "drive-c620-3", spec: "can2-2p", pts: [ [1045, 835], [1045, 790] ] },
-      { from: "chassis-breakout", to: "drive-c620-4", spec: "can2-2p", pts: [ [1070, 845], [1135, 845], [1135, 790] ] },
+      { from: "chassis-breakout", to: "drive-c620-1", spec: "can2-2p", pts: [ [1130, 865], [1055, 865], [1055, 810] ] },
+      { from: "chassis-breakout", to: "drive-c620-2", spec: "can2-2p", pts: [ [1145, 855], [1145, 810] ] },
+      { from: "chassis-breakout", to: "drive-c620-3", spec: "can2-2p", pts: [ [1235, 855], [1235, 810] ] },
+      { from: "chassis-breakout", to: "drive-c620-4", spec: "can2-2p", pts: [ [1260, 865], [1325, 865], [1325, 810] ] },
 
       // Drive ESCs to Drive 3508 Motors (Power & Encoder straight vertical)
-      { from: "drive-c620-1", to: "drive-3508-1", spec: "c620-3508-pwr", pts: [ [850, 750], [850, 720] ] },
-      { from: "drive-3508-1", to: "drive-c620-1", spec: "encoder-7p", pts: [ [880, 720], [880, 750] ] },
+      { from: "drive-c620-1", to: "drive-3508-1", spec: "c620-3508-pwr", pts: [ [1040, 770], [1040, 740] ] },
+      { from: "drive-3508-1", to: "drive-c620-1", spec: "encoder-7p", pts: [ [1070, 740], [1070, 770] ] },
 
-      { from: "drive-c620-2", to: "drive-3508-2", spec: "c620-3508-pwr", pts: [ [940, 750], [940, 720] ] },
-      { from: "drive-3508-2", to: "drive-c620-2", spec: "encoder-7p", pts: [ [970, 720], [970, 750] ] },
+      { from: "drive-c620-2", to: "drive-3508-2", spec: "c620-3508-pwr", pts: [ [1130, 770], [1130, 740] ] },
+      { from: "drive-3508-2", to: "drive-c620-2", spec: "encoder-7p", pts: [ [1160, 740], [1160, 770] ] },
 
-      { from: "drive-c620-3", to: "drive-3508-3", spec: "c620-3508-pwr", pts: [ [1030, 750], [1030, 720] ] },
-      { from: "drive-3508-3", to: "drive-c620-3", spec: "encoder-7p", pts: [ [1060, 720], [1060, 750] ] },
+      { from: "drive-c620-3", to: "drive-3508-3", spec: "c620-3508-pwr", pts: [ [1220, 770], [1220, 740] ] },
+      { from: "drive-3508-3", to: "drive-c620-3", spec: "encoder-7p", pts: [ [1250, 740], [1250, 770] ] },
 
-      { from: "drive-c620-4", to: "drive-3508-4", spec: "c620-3508-pwr", pts: [ [1120, 750], [1120, 720] ] },
-      { from: "drive-3508-4", to: "drive-c620-4", spec: "encoder-7p", pts: [ [1150, 720], [1150, 750] ] },
+      { from: "drive-c620-4", to: "drive-3508-4", spec: "c620-3508-pwr", pts: [ [1310, 770], [1310, 740] ] },
+      { from: "drive-3508-4", to: "drive-c620-4", spec: "encoder-7p", pts: [ [1340, 740], [1340, 770] ] },
 
       // Battery to PMM (2 separate XT60 In wires as drawn)
-      { from: "battery", to: "pmm", spec: "xt60-pwr", pts: [ [545, 975], [545, 915] ] },
-      { from: "battery", to: "pmm", spec: "xt60-pwr", pts: [ [585, 975], [585, 915] ] },
+      { from: "battery", to: "pmm", spec: "xt60-pwr", pts: [ [730, 1025], [730, 975] ] },
+      { from: "battery", to: "pmm", spec: "xt60-pwr", pts: [ [775, 1025], [775, 975] ] },
 
       // PMM XT30 to Y-Splits
-      { from: "pmm", to: "y-split-ammoboost", spec: "xt30-pwr", pts: [ [490, 740], [490, 715], [525, 715], [525, 698] ] },
-      { from: "pmm", to: "y-split-gimbal", spec: "xt30-pwr", pts: [ [630, 740], [630, 715], [665, 715], [665, 698] ] },
+      { from: "pmm", to: "y-split-ammoboost", spec: "xt30-pwr", pts: [ [670, 790], [670, 765], [705, 765], [705, 746] ] },
+      { from: "pmm", to: "y-split-gimbal", spec: "xt30-pwr", pts: [ [790, 790], [790, 765], [825, 765], [825, 746] ] },
 
       // PMM to MCB Type A (XT30 MiniPC/Power)
-      { from: "pmm", to: "mcb-type-a", spec: "xt30-pwr", pts: [ [450, 760], [350, 760], [350, 620] ] },
+      { from: "pmm", to: "mcb-type-a", spec: "xt30-pwr", pts: [ [620, 810], [410, 810], [410, 650] ] },
 
       // PMM to Current Sensor & Chassis Breakout (XT30 Chassis Power)
-      { from: "pmm", to: "current-sensor", spec: "xt30-pwr", pts: [ [700, 845], [800, 845] ] },
-      { from: "current-sensor", to: "chassis-breakout", spec: "xt30-pwr", pts: [ [910, 850], [940, 850] ] },
+      { from: "pmm", to: "current-sensor", spec: "xt30-pwr", pts: [ [890, 875], [970, 875] ] },
+      { from: "current-sensor", to: "chassis-breakout", spec: "xt30-pwr", pts: [ [1090, 875], [1130, 875] ] },
 
       // PMM to Lower Slipring Breakout (MiniPC & Ref Cable)
-      { from: "pmm", to: "lower-slipring-breakout", spec: "xt30-pwr", pts: [ [550, 740], [550, 610] ] },
-      { from: "pmm", to: "lower-slipring-breakout", spec: "ref-cable", pts: [ [670, 740], [670, 610] ] },
+      { from: "pmm", to: "lower-slipring-breakout", spec: "xt30-pwr", pts: [ [645, 790], [645, 675] ] },
+      { from: "pmm", to: "lower-slipring-breakout", spec: "ref-cable", pts: [ [870, 790], [870, 675] ] },
 
       // PMM to MCM (Ref Cable)
-      { from: "pmm", to: "mcm", spec: "ref-cable", pts: [ [700, 885], [780, 885], [780, 935] ] },
+      { from: "pmm", to: "mcm", spec: "ref-cable", pts: [ [890, 935], [955, 935], [955, 955] ] },
 
       // MCM to RFID (RFID 4p JST straight vertical)
-      { from: "mcm", to: "rfid", spec: "rfid-4p", pts: [ [775, 977], [775, 995] ] },
+      { from: "mcm", to: "rfid", spec: "rfid-4p", pts: [ [955, 997], [955, 1025] ] },
 
       // MCM to Lightbar (Black Ref straight horizontal)
-      { from: "mcm", to: "lightbar", spec: "black-ref", pts: [ [815, 960], [835, 960], [835, 1015], [860, 1015] ] },
+      { from: "mcm", to: "lightbar", spec: "black-ref", pts: [ [995, 975], [1015, 975], [1015, 1045], [1040, 1045] ] },
 
       // PMM to Armor 1 & 2 (Two separate Armor 7p JST ports from PMM)
-      { from: "pmm", to: "armor-1", spec: "armor-cable", pts: [ [700, 785], [760, 785], [760, 915], [850, 915] ] },
-      { from: "pmm", to: "armor-2", spec: "armor-cable", pts: [ [700, 810], [745, 810], [745, 965], [850, 965] ] },
+      { from: "pmm", to: "armor-1", spec: "armor-cable", pts: [ [890, 815], [930, 815], [930, 940], [1030, 940] ] },
+      { from: "pmm", to: "armor-2", spec: "armor-cable", pts: [ [890, 840], [915, 840], [915, 990], [1030, 990] ] },
 
       // Armor plate daisy chains (Straight horizontal & vertical)
-      { from: "armor-1", to: "armor-3", spec: "armor-cable", pts: [ [925, 915], [945, 915] ] },
-      { from: "armor-2", to: "armor-4", spec: "armor-cable", pts: [ [925, 965], [945, 965] ] }
+      { from: "armor-1", to: "armor-3", spec: "armor-cable", pts: [ [1105, 940], [1135, 940] ] },
+      { from: "armor-2", to: "armor-4", spec: "armor-cable", pts: [ [1105, 990], [1135, 990] ] }
     ];
 
     // Canvas State
-    let scale = 0.82;
-    let translateX = 40;
+    let scale = 0.76;
+    let translateX = 30;
     let translateY = 15;
     let isPanning = false;
     let startX = 0;
@@ -909,19 +933,19 @@
 
         let swatchHtml = "";
         if (spec.renderStyle === "twisted-pair") {
-          swatchHtml = `<svg class="swatch" viewBox="0 0 32 12">
-            <path d="M 0 3 Q 8 0 16 3 T 32 3" fill="none" stroke="${spec.c1}" stroke-width="2.2" />
-            <path d="M 0 7 Q 8 10 16 7 T 32 7" fill="none" stroke="${spec.c2}" stroke-width="2.2" />
+          swatchHtml = `<svg class="swatch" viewBox="0 0 34 12">
+            <path d="M 0 3 Q 8.5 -1 17 3 T 34 3" fill="none" stroke="${spec.c1}" stroke-width="2.2" />
+            <path d="M 0 9 Q 8.5 13 17 9 T 34 9" fill="none" stroke="${spec.c2}" stroke-width="2.2" />
           </svg>`;
         } else if (spec.renderStyle === "dual-twisted") {
-          swatchHtml = `<svg class="swatch" viewBox="0 0 32 12">
-            <path d="M 0 2 Q 8 0 16 2 T 32 2" fill="none" stroke="${spec.c1}" stroke-width="1.8" />
-            <path d="M 0 5 Q 8 8 16 5 T 32 5" fill="none" stroke="${spec.c2}" stroke-width="1.8" />
-            <path d="M 0 8 Q 8 5 16 8 T 32 8" fill="none" stroke="${spec.c3}" stroke-width="1.8" />
+          swatchHtml = `<svg class="swatch" viewBox="0 0 34 12">
+            <path d="M 0 2 Q 8.5 -1 17 2 T 34 2" fill="none" stroke="${spec.c1}" stroke-width="1.8" />
+            <path d="M 0 6 Q 8.5 9 17 6 T 34 6" fill="none" stroke="${spec.c2}" stroke-width="1.8" />
+            <path d="M 0 10 Q 8.5 7 17 10 T 34 10" fill="none" stroke="${spec.c3}" stroke-width="1.8" />
           </svg>`;
         } else {
-          swatchHtml = `<svg class="swatch" viewBox="0 0 32 12">
-            <line x1="0" y1="6" x2="32" y2="6" stroke="${spec.stroke}" stroke-width="${spec.width || 2.5}" stroke-linecap="round" />
+          swatchHtml = `<svg class="swatch" viewBox="0 0 34 12">
+            <line x1="0" y1="6" x2="34" y2="6" stroke="${spec.stroke}" stroke-width="${spec.width || 2.5}" stroke-linecap="round" />
           </svg>`;
         }
 
@@ -934,13 +958,64 @@
       });
     }
 
+    // Math helper to generate true sinusoidal intertwined twisted wave pairs for SVG polyline paths
+    function generateTwistedPairPaths(pts, wavelength = 24, amplitude = 3.0) {
+      let d1 = "";
+      let d2 = "";
+
+      let totalDist = 0;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p1 = pts[i];
+        const p2 = pts[i + 1];
+        const dx = p2[0] - p1[0];
+        const dy = p2[1] - p1[1];
+        const segLen = Math.hypot(dx, dy);
+        if (segLen === 0) continue;
+
+        const nx = -dy / segLen;
+        const ny = dx / segLen;
+
+        const steps = Math.max(4, Math.ceil(segLen / 3.0));
+        for (let s = 0; s <= steps; s++) {
+          const t = s / steps;
+          const currDist = totalDist + t * segLen;
+          const px = p1[0] + t * dx;
+          const py = p1[1] + t * dy;
+
+          const wave = Math.sin((currDist / wavelength) * 2 * Math.PI) * amplitude;
+
+          const x1 = px + nx * wave;
+          const y1 = py + ny * wave;
+          const x2 = px - nx * wave;
+          const y2 = py - ny * wave;
+
+          const cmd = (i === 0 && s === 0) ? "M" : "L";
+          d1 += `${cmd} ${x1.toFixed(1)} ${y1.toFixed(1)} `;
+          d2 += `${cmd} ${x2.toFixed(1)} ${y2.toFixed(1)} `;
+        }
+        totalDist += segLen;
+      }
+
+      return { d1, d2 };
+    }
+
     // Convert Points Array to SVG Path String (Strict Horizontal & Vertical)
     function buildPathD(pts) {
       if (pts.length === 0) return "";
       return "M " + pts.map(p => `${p[0]} ${p[1]}`).join(" L ");
     }
 
-    // Render Wires with Clean Offset Twin Wires for Twisted Pairs (Matching the Key)
+    // Render Slipring Boundary Line
+    function renderBoundaries() {
+      const layer = document.getElementById("boundaries-layer");
+      const lineG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      lineG.innerHTML = `
+        <line x1="40" y1="475" x2="1480" y2="475" stroke="#388bfd" stroke-width="2" stroke-dasharray="10 8" opacity="0.45" />
+      `;
+      layer.appendChild(lineG);
+    }
+
+    // Render Wires with True Twisted Sinusoidal Waves
     function renderWires() {
       const layer = document.getElementById("wires-layer");
 
@@ -956,19 +1031,21 @@
         let renderContent = "";
 
         if (spec.renderStyle === "twisted-pair") {
-          // Clean offset parallel lines with alternating colored wave pattern like in Key
+          const { d1, d2 } = generateTwistedPairPaths(conn.pts, spec.wl || 24, spec.amp || 3.0);
           renderContent = `
             <g class="wire-render-g">
-              <path class="wire-render" d="${pathD}" stroke="${spec.c1}" stroke-width="${spec.width}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-              <path class="wire-render" d="${pathD}" stroke="${spec.c2}" stroke-width="${spec.width}" stroke-dasharray="8 8" stroke-dashoffset="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <path class="wire-render" d="${d1}" stroke="${spec.c1}" stroke-width="${spec.width}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <path class="wire-render" d="${d2}" stroke="${spec.c2}" stroke-width="${spec.width}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
             </g>
           `;
         } else if (spec.renderStyle === "dual-twisted") {
+          const pair1 = generateTwistedPairPaths(conn.pts, 20, 2.5);
+          const pair2 = generateTwistedPairPaths(conn.pts, 20, -2.5);
           renderContent = `
             <g class="wire-render-g">
-              <path class="wire-render" d="${pathD}" stroke="${spec.c1}" stroke-width="${spec.width + 1}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-              <path class="wire-render" d="${pathD}" stroke="${spec.c2}" stroke-width="${spec.width}" stroke-dasharray="6 6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-              <path class="wire-render" d="${pathD}" stroke="${spec.c3}" stroke-width="${spec.width - 0.5}" stroke-dasharray="12 12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <path class="wire-render" d="${pair1.d1}" stroke="${spec.c1}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <path class="wire-render" d="${pair1.d2}" stroke="${spec.c2}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <path class="wire-render" d="${pair2.d1}" stroke="${spec.c3}" stroke-width="1.6" stroke-dasharray="4 4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
             </g>
           `;
         } else {
@@ -1001,45 +1078,47 @@
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
         if (mod.isPMM) {
-          // Custom PMM Module with all user-specified text annotations inside
+          // Exact PMM labels as in user's drawing
           g.innerHTML = `
             <rect class="module-box" x="${mod.x}" y="${mod.y}" width="${mod.w}" height="${mod.h}" fill="${mod.bg}" stroke="${mod.stroke}" />
-            <text class="module-title" x="${mod.x + mod.w / 2}" y="${mod.y + 105}" text-anchor="middle" font-size="16">PMM</text>
-            <text class="pmm-inner-label" x="${mod.x + 30}" y="${mod.y + 24}">AB</text>
-            <text class="pmm-inner-label" x="${mod.x + 85}" y="${mod.y + 24}">Gimbal</text>
-            <text class="pmm-inner-label" x="${mod.x + 155}" y="${mod.y + 24}">Chassis</text>
-            <text class="pmm-inner-label" x="${mod.x + 30}" y="${mod.y + 55}">MiniPC</text>
-            <text class="pmm-inner-label" x="${mod.x + 115}" y="${mod.y + 70}">XT30</text>
-            <text class="pmm-inner-label" x="${mod.x + 190}" y="${mod.y + 55}">Armor</text>
-            <text class="pmm-inner-label" x="${mod.x + 190}" y="${mod.y + 80}">Armor</text>
-            <text class="pmm-inner-label" x="${mod.x + 30}" y="${mod.y + 140}">UART</text>
-            <text class="pmm-inner-label" x="${mod.x + 205}" y="${mod.y + 115}">Ref</text>
-            <text class="pmm-inner-label" x="${mod.x + 205}" y="${mod.y + 145}">Ref</text>
-            <text class="pmm-inner-label" x="${mod.x + 110}" y="${mod.y + 165}">XT60 in</text>
-            <text class="pmm-inner-label" x="${mod.x + 185}" y="${mod.y + 165}">MCM Ref</text>
+            <text class="module-title" x="${mod.x + mod.w / 2}" y="${mod.y + 115}" text-anchor="middle" font-size="16">PMM</text>
+            <text class="pin-label" x="${mod.x + 35}" y="${mod.y + 24}">AB</text>
+            <text class="pin-label" x="${mod.x + 95}" y="${mod.y + 24}">Gimbal</text>
+            <text class="pin-label" x="${mod.x + 165}" y="${mod.y + 24}">Chassis</text>
+            <text class="pin-label" x="${mod.x + 25}" y="${mod.y + 55}">MiniPC</text>
+            <text class="pin-label" x="${mod.x + 125}" y="${mod.y + 70}">XT30</text>
+            <text class="pin-label" x="${mod.x + 205}" y="${mod.y + 55}">Armor</text>
+            <text class="pin-label" x="${mod.x + 205}" y="${mod.y + 80}">Armor</text>
+            <text class="pin-label" x="${mod.x + 25}" y="${mod.y + 145}">UART</text>
+            <text class="pin-label" x="${mod.x + 220}" y="${mod.y + 120}">Ref</text>
+            <text class="pin-label" x="${mod.x + 220}" y="${mod.y + 150}">Ref</text>
+            <text class="pin-label" x="${mod.x + 120}" y="${mod.y + 175}">XT60 in</text>
+            <text class="pin-label" x="${mod.x + 195}" y="${mod.y + 175}">MCM Ref</text>
           `;
-        } else if (mod.id === "upper-slipring-breakout") {
+        } else if (mod.isUpperBreakout) {
+          // Exact Upper Slipring Breakout Labels as drawn
           g.innerHTML = `
             <rect class="module-box" x="${mod.x}" y="${mod.y}" width="${mod.w}" height="${mod.h}" fill="${mod.bg}" stroke="${mod.stroke}" />
-            <text class="module-title" x="${mod.x + mod.w / 2}" y="${mod.y + 40}" text-anchor="middle">Upper Slipring Breakout</text>
-            <text class="pmm-inner-label" x="${mod.x + 20}" y="${mod.y + 22}">CAN1</text>
-            <text class="pmm-inner-label" x="${mod.x + 75}" y="${mod.y + 22}">AB</text>
-            <text class="pmm-inner-label" x="${mod.x + 120}" y="${mod.y + 22}">MiniPC</text>
-            <text class="pmm-inner-label" x="${mod.x + 180}" y="${mod.y + 22}">Jetson</text>
-            <text class="pmm-inner-label" x="${mod.x + 235}" y="${mod.y + 22}">Gimbal</text>
-            <text class="pmm-inner-label" x="${mod.x + 245}" y="${mod.y + 36}">UART</text>
-            <text class="pmm-inner-label" x="${mod.x + 250}" y="${mod.y + 85}">Ref</text>
+            <text class="module-title" x="${mod.x + mod.w / 2}" y="${mod.y + 80}" text-anchor="middle">Upper Slipring Breakout</text>
+            <text class="pin-label" x="${mod.x + 25}" y="${mod.y + 40}">CAN1</text>
+            <text class="pin-label" x="${mod.x + 80}" y="${mod.y + 24}">AB</text>
+            <text class="pin-label" x="${mod.x + 130}" y="${mod.y + 24}">MiniPC</text>
+            <text class="pin-label" x="${mod.x + 195}" y="${mod.y + 24}">Jetson</text>
+            <text class="pin-label" x="${mod.x + 250}" y="${mod.y + 24}">Gimbal</text>
+            <text class="pin-label" x="${mod.x + 265}" y="${mod.y + 38}">UART</text>
+            <text class="pin-label" x="${mod.x + 275}" y="${mod.y + 115}">Ref</text>
           `;
-        } else if (mod.id === "lower-slipring-breakout") {
+        } else if (mod.isLowerBreakout) {
+          // Exact Lower Slipring Breakout Labels as drawn
           g.innerHTML = `
             <rect class="module-box" x="${mod.x}" y="${mod.y}" width="${mod.w}" height="${mod.h}" fill="${mod.bg}" stroke="${mod.stroke}" />
-            <text class="module-title" x="${mod.x + mod.w / 2}" y="${mod.y + 60}" text-anchor="middle">Lower Slipring Breakout</text>
-            <text class="pmm-inner-label" x="${mod.x + 20}" y="${mod.y + 30}">CAN1</text>
-            <text class="pmm-inner-label" x="${mod.x + 20}" y="${mod.y + 55}">UART</text>
-            <text class="pmm-inner-label" x="${mod.x + 20}" y="${mod.y + 80}">MiniPC</text>
-            <text class="pmm-inner-label" x="${mod.x + 85}" y="${mod.y + 90}">AB</text>
-            <text class="pmm-inner-label" x="${mod.x + 145}" y="${mod.y + 90}">Gimbal</text>
-            <text class="pmm-inner-label" x="${mod.x + 250}" y="${mod.y + 85}">Ref</text>
+            <text class="module-title" x="${mod.x + mod.w / 2}" y="${mod.y + 70}" text-anchor="middle">Lower Slipring Breakout</text>
+            <text class="pin-label" x="${mod.x + 25}" y="${mod.y + 32}">CAN1</text>
+            <text class="pin-label" x="${mod.x + 25}" y="${mod.y + 62}">UART</text>
+            <text class="pin-label" x="${mod.x + 25}" y="${mod.y + 92}">MiniPC</text>
+            <text class="pin-label" x="${mod.x + 90}" y="${mod.y + 125}">AB</text>
+            <text class="pin-label" x="${mod.x + 160}" y="${mod.y + 125}">Gimbal</text>
+            <text class="pin-label" x="${mod.x + 275}" y="${mod.y + 115}">Ref</text>
           `;
         } else {
           // Clean standard component with just its clean name (no sub labels)
@@ -1191,15 +1270,15 @@
     }, { passive: false });
 
     document.getElementById("btn-reset").addEventListener("click", () => {
-      scale = 0.82;
-      translateX = 40;
+      scale = 0.76;
+      translateX = 30;
       translateY = 15;
       updateTransform();
     });
 
     document.getElementById("btn-fit").addEventListener("click", () => {
-      scale = 0.65;
-      translateX = 30;
+      scale = 0.60;
+      translateX = 20;
       translateY = 10;
       updateTransform();
     });
@@ -1213,6 +1292,7 @@
 
     // Initialize View
     initLegend();
+    renderBoundaries();
     renderWires();
     renderModules();
     updateTransform();

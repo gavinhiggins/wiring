@@ -1,28 +1,31 @@
-# Sentry Robot Wiring Architecture & Diagram
+# Hero Robot Wiring Architecture & Diagram
 
-Interactive, high-fidelity wiring diagram and connector reference designed for GitHub Pages.
+Interactive, high-fidelity wiring diagram and connector reference for the **RoboMaster Hero Robot**, designed for GitHub Pages.
 
-## Features
-- **Accurate Architecture**: Chassis (PMM, MCB Type A, C620 ESCs, Encoders, IMU), Slip Ring interface, Turret/Gimbal (Turret Breakout, Pitch motor, C610/M2006 Kicker, Flywheels, MCB Type C), Edge AI (Jetson Orin Nano, Intel RealSense), and Referee Subsystems (MCM, Light Bar, 4x Armor Plates, Speed Monitor, VTM).
-- **Color-Coded Wiring & Harness Types**:
-  - **XT60 Battery Power**: Heavy-gauge DC line.
-  - **XT30 Main Power**: Yellow & Gray twisted pair.
-  - **JST 2-Pin CAN**: White & Red twisted pair.
-  - **JST 4-Pin CAN + Low Power**: Dual twisted pairs (White/Red + Yellow/Gray).
-  - **JST Armor Plate Cable**: Straight Orange.
-  - **Ref Cable**: Straight Amber / Gold.
-  - **Black Ref Cable**: Dark line to Light Bar.
-  - **JST OLED Cable**: Straight Cyan line.
-  - **Dupont IMU SPI Cables**: Straight Purple lines.
-  - **USB-A to USB-C**: Straight Blue line for RealSense depth camera stream.
-  - **3-Pin UART JST**: Straight Green lines for serial communication.
-- **Interactive Inspection**:
-  - Click on any wire or item in the **Key** to pop up a detailed specification window (wire gauge, crimp type, connector family, voltage/protocol).
-  - Click on any module board to see all associated in/out harness links.
-- **Navigation Controls**:
-  - **Scroll**: Zoom in/out towards cursor.
-  - **Left-Click Drag**: Smooth pan.
-  - **Reset View / Fit All**: Quick camera reset buttons.
+## Key Architecture & Features
 
-## GitHub Pages Deployment
-This repository is configured so `index.html` can be served directly from GitHub Pages (`Settings` -> `Pages` -> Source: `main` branch, `/ (root)`).
+### 1. Slipring Boundary & Strict Upper / Lower Separation
+- **Upper Robot (Gimbal / Turret / AI Compute)**: Located strictly above the slipring boundary.
+  - **Kicker System**: M2006 Kicker motor with C610 ESC (Power & 4-pin encoder).
+  - **Turret Power & CAN Breakouts**: Turret Breakout and upper CAN Breakout.
+  - **Upper Drive / Launch**: **4x C620 ESCs** and **4x 3508 motors** connected to the Turret Breakout and CAN Breakout.
+  - **Upper Controller & Sensors**: MCB Type C, SPI IMU, Jetson Orin Nano, Intel RealSense (USB A to C), Buck 24V->5V converter, GM6020 Pitch motor, Speed Monitor & VTM.
+  - **Upper Slipring Breakout**: Serves as the top connector interface directly over the slipring.
+- **Slipring Interface**: 360° continuous rotational interface in the center.
+- **Lower Robot (Chassis / Power / Drive / Referee)**: Located strictly below the slipring boundary.
+  - **Lower Slipring Breakout**: Mirrors signals down into the chassis.
+  - **Chassis Controller**: MCB Type A, Chassis SPI IMU, 7-pin OLED display.
+  - **Yaw & Agitator**: Agitator C620 ESC + 3508 motor, Gimbal Yaw C620 ESC + 3508 motor.
+  - **Chassis Drive System**: 4x C620 ESCs + 4x 3508 Wheel Motors driven over CAN 2 via the Chassis Breakout board and Current Sensor.
+  - **Power System**: 6S LiPo Battery (XT60) feeding into the PMM (Power Management Module), splitting out to X-Split, Y-Split, MCB-A, and Chassis Breakout.
+  - **Referee Subsystem**: MCM, 4-plate daisy-chained Armor loop, Lightbar, and RFID reader.
+
+### 2. PCB-Style Routing & Clean Wire Presentation
+- Every wire route follows clean horizontal and vertical lines with 45° chamfers (ortho / 45° PCB trace styling).
+- Wire crossings are kept to an absolute minimum with clean bus corridors.
+- Twisted wires (XT30 Yellow/Gray, CAN 1 White/Red, CAN 2 Red/Dark-Red, CAN 4P dual twisted) render with clean, crisp interwoven sinusoidal styling.
+
+### 3. Interactive Modal & Flyout Specs
+- Click on any wire or key item to view complete specifications (connector type, wire gauge, crimp terminal, pin count, voltage ratings, communication protocol).
+- Click on any board or motor to see all connected input/output harnesses.
+- Mouse scroll to zoom, left-click drag to pan.

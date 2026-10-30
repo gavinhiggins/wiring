@@ -12,6 +12,8 @@
       --text-main: #f0f6fc;
       --text-muted: #8b9bb4;
       --accent: #58a6ff;
+      --success: #238636;
+      --success-border: #3fb950;
     }
 
     * {
@@ -36,13 +38,13 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 50px;
+      height: 52px;
       background: var(--panel-bg);
       border-bottom: 1px solid var(--panel-border);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 24px;
+      padding: 0 20px;
       z-index: 50;
       backdrop-filter: blur(10px);
     }
@@ -68,7 +70,7 @@
     .header-controls {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       font-size: 12px;
       color: var(--text-muted);
     }
@@ -81,12 +83,81 @@
       border-radius: 6px;
       cursor: pointer;
       font-size: 12px;
-      transition: background 0.15s, border-color 0.15s;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .btn:hover {
       background: #243247;
       border-color: #58a6ff;
+    }
+
+    /* Edit Mode Toggle Button */
+    .btn-edit-toggle {
+      background: #1f2a3c;
+      border: 1px solid #388bfd66;
+      color: #58a6ff;
+      font-weight: 600;
+    }
+
+    .btn-edit-toggle:hover {
+      background: #273852;
+      border-color: #58a6ff;
+    }
+
+    .btn-edit-toggle.active {
+      background: #238636;
+      border-color: #3fb950;
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(46, 160, 67, 0.4);
+    }
+
+    /* Edit Toolbar */
+    #edit-toolbar {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: #111722;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #29384d;
+    }
+
+    /* Status Pill / Floating Tip */
+    #edit-hint-pill {
+      position: absolute;
+      top: 62px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(22, 27, 34, 0.95);
+      border: 1px solid #388bfd88;
+      color: #f0f6fc;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      z-index: 45;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      align-items: center;
+      gap: 8px;
+    }
+
+    #edit-hint-pill .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #3fb950;
+      box-shadow: 0 0 8px #3fb950;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+      100% { opacity: 0.4; transform: scale(0.9); }
     }
 
     #viewport {
@@ -113,13 +184,22 @@
     .module-box {
       rx: 6;
       stroke-width: 1.8;
-      transition: filter 0.2s, stroke-width 0.2s;
+      transition: filter 0.15s, stroke-width 0.15s;
       cursor: pointer;
     }
 
     .module-box:hover {
       filter: drop-shadow(0 0 10px rgba(88, 166, 255, 0.6));
       stroke-width: 2.2;
+    }
+
+    body.edit-mode-active .module-box {
+      cursor: move !important;
+    }
+
+    body.edit-mode-active .module-box:hover {
+      filter: drop-shadow(0 0 12px rgba(88, 166, 255, 0.9)) !important;
+      stroke-width: 2.4 !important;
     }
 
     .module-title {
@@ -165,8 +245,34 @@
       filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 10px var(--accent));
     }
 
-    .wire-group.active .wire-render-g {
-      filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 12px var(--accent));
+    .wire-group.active .wire-render-g,
+    .wire-group.wire-selected .wire-render-g {
+      filter: drop-shadow(0 0 8px #58a6ff) drop-shadow(0 0 14px #ffffff) !important;
+    }
+
+    body.edit-mode-active .wire-group {
+      cursor: pointer;
+    }
+
+    /* Editor Overlay Handles */
+    .vertex-handle {
+      cursor: move;
+      transition: r 0.15s, fill 0.15s;
+    }
+
+    .vertex-handle:hover {
+      r: 8px;
+      fill: #ffffff !important;
+      stroke: #58a6ff !important;
+    }
+
+    .midpoint-handle {
+      cursor: copy;
+    }
+
+    .midpoint-handle:hover circle {
+      r: 7.5px;
+      fill: #2ea043;
     }
 
     /* Interactive Legend / Key */
@@ -309,6 +415,92 @@
       border: 1px solid #28374d;
     }
 
+    /* Export / Import Modal */
+    #export-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-box {
+      width: 650px;
+      max-width: 90vw;
+      background: #121824;
+      border: 1px solid #2d3b52;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+      position: relative;
+    }
+
+    .modal-box h2 {
+      font-size: 16px;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+
+    .modal-box p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .modal-box textarea {
+      width: 100%;
+      height: 260px;
+      background: #090d14;
+      border: 1px solid #253347;
+      border-radius: 8px;
+      padding: 10px;
+      color: #388bfd;
+      font-family: monospace;
+      font-size: 11px;
+      resize: vertical;
+      outline: none;
+      box-sizing: border-box;
+      white-space: pre;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1f6feb;
+      color: #ffffff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 90;
+      pointer-events: none;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     .bg-dots {
       fill: #151d29;
     }
@@ -322,14 +514,42 @@
       <span class="badge">RoboMaster 2026 Spec</span>
     </h1>
     <div class="header-controls">
+      <!-- Edit Mode Toggle -->
+      <button class="btn btn-edit-toggle" id="btn-edit-mode">
+        <span>✏️</span> <span id="edit-mode-label">Edit Mode</span>
+      </button>
+
+      <!-- Edit Sub-Toolbar -->
+      <div id="edit-toolbar">
+        <button class="btn" id="btn-snap" title="Cycle grid snap setting (20px -> 10px -> 5px -> Off)">
+          <span>🧲 Snap: <strong id="snap-val">20px</strong></span>
+        </button>
+        <button class="btn" id="btn-save" title="Save layout to browser storage">
+          <span>💾 Save</span>
+        </button>
+        <button class="btn" id="btn-export" title="Export or Import layout JSON">
+          <span>📋 Export</span>
+        </button>
+        <button class="btn" id="btn-reset-layout" title="Reset all modules and wires to default positions">
+          <span>↺ Reset Layout</span>
+        </button>
+      </div>
+
+      <span>•</span>
       <span><kbd>Scroll</kbd> Zoom</span>
       <span>•</span>
-      <span><kbd>Left-Click Drag</kbd> Pan</span>
+      <span><kbd>Drag</kbd> Pan</span>
       <span>•</span>
       <button class="btn" id="btn-reset">Reset View</button>
       <button class="btn" id="btn-fit">Fit All</button>
     </div>
   </header>
+
+  <!-- Edit Mode Floating Status Banner -->
+  <div id="edit-hint-pill">
+    <div class="dot"></div>
+    <span><strong>Edit Mode Active:</strong> Drag modules or wires • Click wire to edit waypoints (+ to add, right-click to delete)</span>
+  </div>
 
   <!-- Interactive Legend / Wire Key -->
   <div id="legend">
@@ -348,12 +568,27 @@
     <div id="panel-body"></div>
   </div>
 
+  <!-- Export / Import Modal -->
+  <div id="export-modal">
+    <div class="modal-box">
+      <h2>📋 Export / Import Wiring Layout JSON</h2>
+      <p>You can copy this JSON to preserve your custom module coordinates and wire routings, or paste JSON here and click <strong>Apply JSON</strong> to load it.</p>
+      <textarea id="export-textarea" spellcheck="false"></textarea>
+      <div class="modal-actions">
+        <button class="btn" id="btn-copy-json">Copy to Clipboard</button>
+        <button class="btn" id="btn-apply-json" style="background:#238636; border-color:#3fb950; color:#fff;">Apply JSON</button>
+        <button class="btn" id="btn-close-modal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Viewport Canvas -->
   <div id="viewport">
     <svg id="canvas">
       <defs>
-        <!-- Background Dot Grid -->
-        <pattern id="grid-dots" width="40" height="40" patternUnits="userSpaceOnUse">
-          <circle cx="20" cy="20" r="1.3" class="bg-dots"></circle>
+        <!-- Background Dot Grid (20x20 matching default snap) -->
+        <pattern id="grid-dots" width="20" height="20" patternUnits="userSpaceOnUse">
+          <circle cx="10" cy="10" r="1.2" class="bg-dots"></circle>
         </pattern>
       </defs>
 
@@ -370,6 +605,9 @@
 
         <!-- Modules Layer -->
         <g id="modules-layer"></g>
+
+        <!-- Editor Overlay Layer (Wire Waypoint Handles & Highlights) -->
+        <g id="editor-overlay-layer"></g>
       </g>
     </svg>
   </div>
@@ -596,25 +834,15 @@
       }
     };
 
-    // Greatly expanded spatial layout with huge clearance between components:
-    // Canvas dimensions: X: 100 to 1950, Y: 40 to 1550
-    // Center spine:
-    //   Upper Slipring Breakout: X=880, Y=330
-    //   Slipring: X=950, Y=560
-    //   Lower Slipring Breakout: X=880, Y=670
-    //   PMM: X=890, Y=1060
-    //   Battery: X=970, Y=1380
-    const MODULES = [
-      // ==========================================
-      // UPPER ROBOT MODULES (Strictly Y <= 500)
-      // ==========================================
+    // Default Module Positions
+    const INITIAL_MODULES = [
+      // UPPER ROBOT MODULES
       { id: "kicker-2006", name: "Kicker 2006", x: 200, y: 50, w: 160, h: 52, bg: "#21262d", stroke: "#484f58" },
       { id: "kicker-c610", name: "Kicker C610", x: 520, y: 50, w: 150, h: 52, bg: "#9e6a03", stroke: "#d29922" },
 
       { id: "turret-breakout", name: "Turret Breakout", x: 200, y: 190, w: 260, h: 90, bg: "#8957e5", stroke: "#a371f7" },
       { id: "upper-can-breakout", name: "CAN Breakout", x: 260, y: 340, w: 170, h: 54, bg: "#8957e5", stroke: "#a371f7" },
 
-      // Upper 4 separate C620s and 4 separate 3508s (stacked with generous spacing)
       { id: "upper-c620-1", name: "C620", x: 130, y: 440, w: 85, h: 40, bg: "#9e6a03", stroke: "#d29922" },
       { id: "upper-3508-1", name: "3508", x: 280, y: 440, w: 85, h: 40, bg: "#21262d", stroke: "#484f58" },
 
@@ -647,16 +875,10 @@
         isUpperBreakout: true
       },
 
-      // ==========================================
-      // SLIPRING (Centered between Upper & Lower)
-      // Y = 560 to 620
-      // ==========================================
+      // SLIPRING
       { id: "slipring", name: "Slipring", x: 940, y: 560, w: 170, h: 58, bg: "#30363d", stroke: "#e3b341" },
 
-      // ==========================================
-      // LOWER ROBOT MODULES (Strictly Y >= 670)
-      // ==========================================
-      // Lower Slipring Breakout
+      // LOWER ROBOT MODULES
       {
         id: "lower-slipring-breakout",
         name: "Lower Slipring Breakout",
@@ -669,17 +891,17 @@
       { id: "chassis-imu", name: "IMU", x: 130, y: 720, w: 95, h: 46, bg: "#1f6feb", stroke: "#58a6ff" },
       { id: "oled", name: "OLED", x: 130, y: 805, w: 95, h: 46, bg: "#1f6feb", stroke: "#58a6ff" },
 
-      // Y Splits (spaced well apart with non-colinear routing)
+      // Y Splits
       { id: "y-split-ammoboost", name: "Y Split", x: 860, y: 925, w: 90, h: 42, bg: "#8957e5", stroke: "#a371f7" },
       { id: "y-split-gimbal", name: "Y Split", x: 1050, y: 925, w: 90, h: 42, bg: "#8957e5", stroke: "#a371f7" },
 
-      // Agitator & Yaw Motors on Chassis
+      // Agitator & Yaw Motors
       { id: "agitator-c620", name: "Agitator C620", x: 1360, y: 700, w: 125, h: 46, bg: "#9e6a03", stroke: "#d29922" },
       { id: "agitator-3508", name: "Agitator 3508", x: 1560, y: 700, w: 125, h: 46, bg: "#21262d", stroke: "#484f58" },
       { id: "yaw-c620", name: "Yaw C620", x: 1360, y: 790, w: 125, h: 46, bg: "#9e6a03", stroke: "#d29922" },
       { id: "yaw-3508", name: "Yaw 3508", x: 1560, y: 790, w: 125, h: 46, bg: "#21262d", stroke: "#484f58" },
 
-      // Chassis 4 Drive ESCs (C620) & 4 Motors (3508)
+      // Chassis 4 Drive ESCs & Motors
       { id: "drive-3508-1", name: "3508", x: 1280, y: 900, w: 80, h: 45, bg: "#21262d", stroke: "#484f58" },
       { id: "drive-3508-2", name: "3508", x: 1390, y: 900, w: 80, h: 45, bg: "#21262d", stroke: "#484f58" },
       { id: "drive-3508-3", name: "3508", x: 1500, y: 900, w: 80, h: 45, bg: "#21262d", stroke: "#484f58" },
@@ -717,437 +939,191 @@
       { id: "armor-4", name: "Armor", x: 1445, y: 1255, w: 85, h: 42, bg: "#b62324", stroke: "#ff7b72" }
     ];
 
-    // CONNECTIONS with distinct non-colinear tracks, minimal bends, and clear text labels
-    const CONNECTIONS = [
-      // ==========================================
+    // Default Connection Paths
+    const INITIAL_CONNECTIONS = [
       // UPPER ROBOT CONNECTIONS
-      // ==========================================
-      // Kicker 2006 to Kicker C610 (Straight horizontal lines)
-      {
-        from: "kicker-2006", to: "kicker-c610", spec: "c610-2006-pwr", label: "2006 Power",
-        pts: [ [360, 65], [520, 65] ]
-      },
-      {
-        from: "kicker-2006", to: "kicker-c610", spec: "c610-2006-enc", label: "2006 Encode 4p",
-        pts: [ [360, 85], [520, 85] ]
-      },
+      { from: "kicker-2006", to: "kicker-c610", spec: "c610-2006-pwr", label: "2006 Power", pts: [ [360, 65], [520, 65] ] },
+      { from: "kicker-2006", to: "kicker-c610", spec: "c610-2006-enc", label: "2006 Encode 4p", pts: [ [360, 85], [520, 85] ] },
 
-      // Turret Breakout to Kicker C610: XT30 Power & CAN 1
-      {
-        from: "turret-breakout", to: "kicker-c610", spec: "xt30-pwr", label: "Kicker XT30",
-        pts: [ [410, 190], [410, 140], [560, 140], [560, 102] ]
-      },
-      {
-        from: "turret-breakout", to: "kicker-c610", spec: "can1-2p", label: "CAN 1 (Kicker)",
-        pts: [ [435, 190], [435, 125], [620, 125], [620, 102] ]
-      },
+      { from: "turret-breakout", to: "kicker-c610", spec: "xt30-pwr", label: "Kicker XT30", pts: [ [410, 190], [410, 140], [560, 140], [560, 102] ] },
+      { from: "turret-breakout", to: "kicker-c610", spec: "can1-2p", label: "CAN 1 (Kicker)", pts: [ [435, 190], [435, 125], [620, 125], [620, 102] ] },
 
-      // Turret Breakout to Upper CAN Breakout (Straight vertical CAN 1 2p)
-      {
-        from: "turret-breakout", to: "upper-can-breakout", spec: "can1-2p", label: "CAN 1 Bus",
-        pts: [ [345, 280], [345, 340] ]
-      },
+      { from: "turret-breakout", to: "upper-can-breakout", spec: "can1-2p", label: "CAN 1 Bus", pts: [ [345, 280], [345, 340] ] },
 
-      // Turret Breakout to Upper 4x C620 (XT30 Power bus track down left X=70)
-      {
-        from: "turret-breakout", to: "upper-c620-1", spec: "xt30-pwr", label: "Flywheel XT30",
-        pts: [ [220, 280], [220, 310], [70, 310], [70, 460], [130, 460] ]
-      },
-      {
-        from: "turret-breakout", to: "upper-c620-2", spec: "xt30-pwr", label: "Flywheel XT30",
-        pts: [ [70, 460], [70, 525], [130, 525] ]
-      },
-      {
-        from: "turret-breakout", to: "upper-c620-3", spec: "xt30-pwr", label: "Flywheel XT30",
-        pts: [ [70, 525], [70, 590], [130, 590] ]
-      },
-      {
-        from: "turret-breakout", to: "upper-c620-4", spec: "xt30-pwr", label: "Flywheel XT30",
-        pts: [ [70, 590], [70, 655], [130, 655] ]
-      },
+      { from: "turret-breakout", to: "upper-c620-1", spec: "xt30-pwr", label: "Flywheel XT30", pts: [ [220, 280], [220, 310], [70, 310], [70, 460], [130, 460] ] },
+      { from: "turret-breakout", to: "upper-c620-2", spec: "xt30-pwr", label: "Flywheel XT30", pts: [ [70, 460], [70, 525], [130, 525] ] },
+      { from: "turret-breakout", to: "upper-c620-3", spec: "xt30-pwr", label: "Flywheel XT30", pts: [ [70, 525], [70, 590], [130, 590] ] },
+      { from: "turret-breakout", to: "upper-c620-4", spec: "xt30-pwr", label: "Flywheel XT30", pts: [ [70, 590], [70, 655], [130, 655] ] },
 
-      // Upper CAN Breakout to Upper 4x C620 (CAN 1 2p track down X=95)
-      {
-        from: "upper-can-breakout", to: "upper-c620-1", spec: "can1-2p", label: "CAN 1 Flywheels",
-        pts: [ [260, 367], [95, 367], [95, 450], [130, 450] ]
-      },
-      {
-        from: "upper-can-breakout", to: "upper-c620-2", spec: "can1-2p", label: "CAN 1 Flywheels",
-        pts: [ [95, 450], [95, 515], [130, 515] ]
-      },
-      {
-        from: "upper-can-breakout", to: "upper-c620-3", spec: "can1-2p", label: "CAN 1 Flywheels",
-        pts: [ [95, 515], [95, 580], [130, 580] ]
-      },
-      {
-        from: "upper-can-breakout", to: "upper-c620-4", spec: "can1-2p", label: "CAN 1 Flywheels",
-        pts: [ [95, 580], [95, 645], [130, 645] ]
-      },
+      { from: "upper-can-breakout", to: "upper-c620-1", spec: "can1-2p", label: "CAN 1 Flywheels", pts: [ [260, 367], [95, 367], [95, 450], [130, 450] ] },
+      { from: "upper-can-breakout", to: "upper-c620-2", spec: "can1-2p", label: "CAN 1 Flywheels", pts: [ [95, 450], [95, 515], [130, 515] ] },
+      { from: "upper-can-breakout", to: "upper-c620-3", spec: "can1-2p", label: "CAN 1 Flywheels", pts: [ [95, 515], [95, 580], [130, 580] ] },
+      { from: "upper-can-breakout", to: "upper-c620-4", spec: "can1-2p", label: "CAN 1 Flywheels", pts: [ [95, 580], [95, 645], [130, 645] ] },
 
-      // Upper C620s to Upper 3508s (Straight horizontal power and encoder lines)
-      {
-        from: "upper-c620-1", to: "upper-3508-1", spec: "c620-3508-pwr", label: "Phase Power",
-        pts: [ [215, 450], [280, 450] ]
-      },
-      {
-        from: "upper-3508-1", to: "upper-c620-1", spec: "encoder-7p", label: "Encoder 7p",
-        pts: [ [280, 465], [215, 465] ]
-      },
+      { from: "upper-c620-1", to: "upper-3508-1", spec: "c620-3508-pwr", label: "Phase Power", pts: [ [215, 450], [280, 450] ] },
+      { from: "upper-3508-1", to: "upper-c620-1", spec: "encoder-7p", label: "Encoder 7p", pts: [ [280, 465], [215, 465] ] },
 
-      {
-        from: "upper-c620-2", to: "upper-3508-2", spec: "c620-3508-pwr", label: "Phase Power",
-        pts: [ [215, 515], [280, 515] ]
-      },
-      {
-        from: "upper-3508-2", to: "upper-c620-2", spec: "encoder-7p", label: "Encoder 7p",
-        pts: [ [280, 530], [215, 530] ]
-      },
+      { from: "upper-c620-2", to: "upper-3508-2", spec: "c620-3508-pwr", label: "Phase Power", pts: [ [215, 515], [280, 515] ] },
+      { from: "upper-3508-2", to: "upper-c620-2", spec: "encoder-7p", label: "Encoder 7p", pts: [ [280, 530], [215, 530] ] },
 
-      {
-        from: "upper-c620-3", to: "upper-3508-3", spec: "c620-3508-pwr", label: "Phase Power",
-        pts: [ [215, 580], [280, 580] ]
-      },
-      {
-        from: "upper-3508-3", to: "upper-c620-3", spec: "encoder-7p", label: "Encoder 7p",
-        pts: [ [280, 595], [215, 595] ]
-      },
+      { from: "upper-c620-3", to: "upper-3508-3", spec: "c620-3508-pwr", label: "Phase Power", pts: [ [215, 580], [280, 580] ] },
+      { from: "upper-3508-3", to: "upper-c620-3", spec: "encoder-7p", label: "Encoder 7p", pts: [ [280, 595], [215, 595] ] },
 
-      {
-        from: "upper-c620-4", to: "upper-3508-4", spec: "c620-3508-pwr", label: "Phase Power",
-        pts: [ [215, 645], [280, 645] ]
-      },
-      {
-        from: "upper-3508-4", to: "upper-c620-4", spec: "encoder-7p", label: "Encoder 7p",
-        pts: [ [280, 660], [215, 660] ]
-      },
+      { from: "upper-c620-4", to: "upper-3508-4", spec: "c620-3508-pwr", label: "Phase Power", pts: [ [215, 645], [280, 645] ] },
+      { from: "upper-3508-4", to: "upper-c620-4", spec: "encoder-7p", label: "Encoder 7p", pts: [ [280, 660], [215, 660] ] },
 
-      // Turret Breakout to Pitch 6020 (CAN 1 at Y=230, XT30 at Y=250)
-      {
-        from: "turret-breakout", to: "pitch-6020", spec: "can1-2p", label: "CAN 1 (Pitch)",
-        pts: [ [460, 220], [800, 220], [800, 375], [1620, 375] ]
-      },
-      {
-        from: "turret-breakout", to: "pitch-6020", spec: "xt30-pwr", label: "Pitch XT30",
-        pts: [ [460, 245], [780, 245], [780, 395], [1620, 395] ]
-      },
+      { from: "turret-breakout", to: "pitch-6020", spec: "can1-2p", label: "CAN 1 (Pitch)", pts: [ [460, 220], [800, 220], [800, 375], [1620, 375] ] },
+      { from: "turret-breakout", to: "pitch-6020", spec: "xt30-pwr", label: "Pitch XT30", pts: [ [460, 245], [780, 245], [780, 395], [1620, 395] ] },
 
-      // Turret Breakout to MCB Type C (XT30 Power & CAN 1)
-      {
-        from: "turret-breakout", to: "mcb-type-c", spec: "xt30-pwr", label: "Turret MCB Power",
-        pts: [ [460, 200], [700, 200], [700, 140], [920, 140] ]
-      },
-      {
-        from: "turret-breakout", to: "mcb-type-c", spec: "can1-2p", label: "CAN 1 (Gimbal MCU)",
-        pts: [ [460, 210], [680, 210], [680, 115], [920, 115] ]
-      },
+      { from: "turret-breakout", to: "mcb-type-c", spec: "xt30-pwr", label: "Turret MCB Power", pts: [ [460, 200], [700, 200], [700, 140], [920, 140] ] },
+      { from: "turret-breakout", to: "mcb-type-c", spec: "can1-2p", label: "CAN 1 (Gimbal MCU)", pts: [ [460, 210], [680, 210], [680, 115], [920, 115] ] },
 
-      // Upper Slipring Breakout CAN1 out to Turret Breakout (ONLY CAN out)
-      {
-        from: "upper-slipring-breakout", to: "turret-breakout", spec: "can1-2p", label: "CAN 1 Thru",
-        pts: [ [840, 345], [640, 345], [640, 260], [460, 260] ]
-      },
-      // Upper Slipring Breakout Ammoboost XT30 out to Turret Breakout
-      {
-        from: "upper-slipring-breakout", to: "turret-breakout", spec: "xt30-pwr", label: "Ammoboost XT30",
-        pts: [ [840, 385], [620, 385], [620, 275], [460, 275] ]
-      },
+      { from: "upper-slipring-breakout", to: "turret-breakout", spec: "can1-2p", label: "CAN 1 Thru", pts: [ [840, 345], [640, 345], [640, 260], [460, 260] ] },
+      { from: "upper-slipring-breakout", to: "turret-breakout", spec: "xt30-pwr", label: "Ammoboost XT30", pts: [ [840, 385], [620, 385], [620, 275], [460, 275] ] },
 
-      // MCB Type C to Turret IMU (Straight horizontal line SPI)
-      {
-        from: "mcb-type-c", to: "upper-imu", spec: "spi-cable", label: "SPI IMU",
-        pts: [ [1150, 75], [1360, 75] ]
-      },
+      { from: "mcb-type-c", to: "upper-imu", spec: "spi-cable", label: "SPI IMU", pts: [ [1150, 75], [1360, 75] ] },
+      { from: "mcb-type-c", to: "jetson", spec: "uart-3w", label: "UART 3 wire", pts: [ [1150, 155], [1470, 155] ] },
+      { from: "jetson", to: "realsense", spec: "usb-cable", label: "USB RealSense", pts: [ [1600, 145], [1600, 75], [1730, 75] ] },
 
-      // MCB Type C to Jetson (Straight horizontal UART 3-wire)
-      {
-        from: "mcb-type-c", to: "jetson", spec: "uart-3w", label: "UART 3 wire",
-        pts: [ [1150, 155], [1470, 155] ]
-      },
+      { from: "upper-slipring-breakout", to: "buck-converter", spec: "xt30-pwr", label: "MiniPC 24V", pts: [ [1210, 350], [1350, 350], [1350, 290], [1470, 290] ] },
+      { from: "buck-converter", to: "jetson", spec: "xt30-pwr", label: "5V Power", pts: [ [1550, 265], [1550, 217] ] },
 
-      // Jetson to RealSense (Straight vertical & horizontal USB)
-      {
-        from: "jetson", to: "realsense", spec: "usb-cable", label: "USB RealSense",
-        pts: [ [1600, 145], [1600, 75], [1730, 75] ]
-      },
+      { from: "upper-slipring-breakout", to: "speed-monitor", spec: "ref-cable", label: "Ref Cable", pts: [ [1210, 420], [1380, 420], [1380, 475], [1540, 475] ] },
+      { from: "speed-monitor", to: "vtm", spec: "ref-cable", label: "Ref Cable", pts: [ [1660, 498], [1660, 530] ] },
 
-      // Upper Slipring Breakout to Buck 24-5V (MiniPC XT30)
-      {
-        from: "upper-slipring-breakout", to: "buck-converter", spec: "xt30-pwr", label: "MiniPC 24V",
-        pts: [ [1210, 350], [1350, 350], [1350, 290], [1470, 290] ]
-      },
+      // SLIPRING PASSTHROUGHS
+      { from: "upper-slipring-breakout", to: "slipring", spec: "can1-2p", label: "CAN 1", pts: [ [970, 470], [970, 560] ] },
+      { from: "upper-slipring-breakout", to: "slipring", spec: "uart-3w", label: "UART", pts: [ [1010, 470], [1010, 560] ] },
+      { from: "upper-slipring-breakout", to: "slipring", spec: "xt30-pwr", label: "Power", pts: [ [1050, 470], [1050, 560] ] },
+      { from: "upper-slipring-breakout", to: "slipring", spec: "ref-cable", label: "Ref", pts: [ [1090, 470], [1090, 560] ] },
 
-      // Buck 24-5V to Jetson Power (Straight vertical line)
-      {
-        from: "buck-converter", to: "jetson", spec: "xt30-pwr", label: "5V Power",
-        pts: [ [1550, 265], [1550, 217] ]
-      },
+      { from: "slipring", to: "lower-slipring-breakout", spec: "can1-2p", label: "CAN 1", pts: [ [970, 618], [970, 690] ] },
+      { from: "slipring", to: "lower-slipring-breakout", spec: "uart-3w", label: "UART", pts: [ [1010, 618], [1010, 690] ] },
+      { from: "slipring", to: "lower-slipring-breakout", spec: "xt30-pwr", label: "Power", pts: [ [1050, 618], [1050, 690] ] },
+      { from: "slipring", to: "lower-slipring-breakout", spec: "ref-cable", label: "Ref", pts: [ [1090, 618], [1090, 690] ] },
 
-      // Upper Slipring Breakout to Speed Monitor (Ref Cable)
-      {
-        from: "upper-slipring-breakout", to: "speed-monitor", spec: "ref-cable", label: "Ref Cable",
-        pts: [ [1210, 420], [1380, 420], [1380, 475], [1540, 475] ]
-      },
-      // Speed Monitor to VTM (Straight vertical line)
-      {
-        from: "speed-monitor", to: "vtm", spec: "ref-cable", label: "Ref Cable",
-        pts: [ [1660, 498], [1660, 530] ]
-      },
-
-      // ==========================================
-      // SLIPRING PASSTHROUGHS (Clean, perfectly parallel vertical lines)
-      // ==========================================
-      {
-        from: "upper-slipring-breakout", to: "slipring", spec: "can1-2p", label: "CAN 1",
-        pts: [ [970, 470], [970, 560] ]
-      },
-      {
-        from: "upper-slipring-breakout", to: "slipring", spec: "uart-3w", label: "UART",
-        pts: [ [1010, 470], [1010, 560] ]
-      },
-      {
-        from: "upper-slipring-breakout", to: "slipring", spec: "xt30-pwr", label: "Power",
-        pts: [ [1050, 470], [1050, 560] ]
-      },
-      {
-        from: "upper-slipring-breakout", to: "slipring", spec: "ref-cable", label: "Ref",
-        pts: [ [1090, 470], [1090, 560] ]
-      },
-
-      {
-        from: "slipring", to: "lower-slipring-breakout", spec: "can1-2p", label: "CAN 1",
-        pts: [ [970, 618], [970, 690] ]
-      },
-      {
-        from: "slipring", to: "lower-slipring-breakout", spec: "uart-3w", label: "UART",
-        pts: [ [1010, 618], [1010, 690] ]
-      },
-      {
-        from: "slipring", to: "lower-slipring-breakout", spec: "xt30-pwr", label: "Power",
-        pts: [ [1050, 618], [1050, 690] ]
-      },
-      {
-        from: "slipring", to: "lower-slipring-breakout", spec: "ref-cable", label: "Ref",
-        pts: [ [1090, 618], [1090, 690] ]
-      },
-
-      // ==========================================
       // LOWER ROBOT CONNECTIONS
-      // ==========================================
-      // Lower Slipring Breakout to MCB Type A (Straight horizontal lines)
-      {
-        from: "lower-slipring-breakout", to: "mcb-type-a", spec: "can1-2p", label: "CAN 1 (Chassis MCU)",
-        pts: [ [840, 740], [550, 740] ]
-      },
-      {
-        from: "lower-slipring-breakout", to: "mcb-type-a", spec: "uart-3w", label: "UART 3 wire",
-        pts: [ [840, 780], [550, 780] ]
-      },
+      { from: "lower-slipring-breakout", to: "mcb-type-a", spec: "can1-2p", label: "CAN 1 (Chassis MCU)", pts: [ [840, 740], [550, 740] ] },
+      { from: "lower-slipring-breakout", to: "mcb-type-a", spec: "uart-3w", label: "UART 3 wire", pts: [ [840, 780], [550, 780] ] },
 
-      // MCB Type A to Chassis IMU (Straight horizontal line SPI)
-      {
-        from: "mcb-type-a", to: "chassis-imu", spec: "spi-cable", label: "SPI IMU",
-        pts: [ [320, 745], [225, 745] ]
-      },
-      // MCB Type A to OLED (Straight horizontal line OLED 7p)
-      {
-        from: "mcb-type-a", to: "oled", spec: "oled-7p", label: "OLED 7p",
-        pts: [ [320, 825], [225, 825] ]
-      },
+      { from: "mcb-type-a", to: "chassis-imu", spec: "spi-cable", label: "SPI IMU", pts: [ [320, 745], [225, 745] ] },
+      { from: "mcb-type-a", to: "oled", spec: "oled-7p", label: "OLED 7p", pts: [ [320, 825], [225, 825] ] },
 
-      // MCB Type A to Agitator C620 and Yaw C620 (Dedicated separate tracks)
-      {
-        from: "mcb-type-a", to: "agitator-c620", spec: "can1-2p", label: "CAN 1 (Agitator)",
-        pts: [ [550, 725], [740, 725], [740, 675], [1300, 675], [1300, 715], [1360, 715] ]
-      },
-      {
-        from: "mcb-type-a", to: "yaw-c620", spec: "can1-2p", label: "CAN 1 (Yaw)",
-        pts: [ [550, 760], [720, 760], [720, 660], [1320, 660], [1320, 805], [1360, 805] ]
-      },
+      { from: "mcb-type-a", to: "agitator-c620", spec: "can1-2p", label: "CAN 1 (Agitator)", pts: [ [550, 725], [740, 725], [740, 675], [1300, 675], [1300, 715], [1360, 715] ] },
+      { from: "mcb-type-a", to: "yaw-c620", spec: "can1-2p", label: "CAN 1 (Yaw)", pts: [ [550, 760], [720, 760], [720, 660], [1320, 660], [1320, 805], [1360, 805] ] },
 
-      // Y-Split Ammoboost and Y-Split Gimbal to Agitator & Yaw (Dedicated separate tracks, NOT colinear)
-      {
-        from: "y-split-ammoboost", to: "agitator-c620", spec: "xt30-pwr", label: "Ammoboost XT30",
-        pts: [ [950, 945], [1240, 945], [1240, 730], [1360, 730] ]
-      },
-      {
-        from: "y-split-gimbal", to: "yaw-c620", spec: "xt30-pwr", label: "Gimbal XT30",
-        pts: [ [1140, 945], [1260, 945], [1260, 820], [1360, 820] ]
-      },
+      { from: "y-split-ammoboost", to: "agitator-c620", spec: "xt30-pwr", label: "Ammoboost XT30", pts: [ [950, 945], [1240, 945], [1240, 730], [1360, 730] ] },
+      { from: "y-split-gimbal", to: "yaw-c620", spec: "xt30-pwr", label: "Gimbal XT30", pts: [ [1140, 945], [1260, 945], [1260, 820], [1360, 820] ] },
 
-      // Agitator & Yaw C620s to 3508 Motors (Straight horizontal lines)
-      {
-        from: "agitator-c620", to: "agitator-3508", spec: "c620-3508-pwr", label: "Phase Power",
-        pts: [ [1485, 715], [1560, 715] ]
-      },
-      {
-        from: "agitator-3508", to: "agitator-c620", spec: "encoder-7p", label: "Encoder 7p",
-        pts: [ [1560, 730], [1485, 730] ]
-      },
+      { from: "agitator-c620", to: "agitator-3508", spec: "c620-3508-pwr", label: "Phase Power", pts: [ [1485, 715], [1560, 715] ] },
+      { from: "agitator-3508", to: "agitator-c620", spec: "encoder-7p", label: "Encoder 7p", pts: [ [1560, 730], [1485, 730] ] },
 
-      {
-        from: "yaw-c620", to: "yaw-3508", spec: "c620-3508-pwr", label: "Phase Power",
-        pts: [ [1485, 805], [1560, 805] ]
-      },
-      {
-        from: "yaw-3508", to: "yaw-c620", spec: "encoder-7p", label: "Encoder 7p",
-        pts: [ [1560, 820], [1485, 820] ]
-      },
+      { from: "yaw-c620", to: "yaw-3508", spec: "c620-3508-pwr", label: "Phase Power", pts: [ [1485, 805], [1560, 805] ] },
+      { from: "yaw-3508", to: "yaw-c620", spec: "encoder-7p", label: "Encoder 7p", pts: [ [1560, 820], [1485, 820] ] },
 
-      // Y-Splits to Lower Slipring Breakout (Separate vertical non-colinear lines)
-      {
-        from: "y-split-ammoboost", to: "lower-slipring-breakout", spec: "xt30-pwr", label: "AB XT30",
-        pts: [ [905, 925], [905, 850] ]
-      },
-      {
-        from: "y-split-gimbal", to: "lower-slipring-breakout", spec: "xt30-pwr", label: "Gimbal XT30",
-        pts: [ [1095, 925], [1095, 850] ]
-      },
+      { from: "y-split-ammoboost", to: "lower-slipring-breakout", spec: "xt30-pwr", label: "AB XT30", pts: [ [905, 925], [905, 850] ] },
+      { from: "y-split-gimbal", to: "lower-slipring-breakout", spec: "xt30-pwr", label: "Gimbal XT30", pts: [ [1095, 925], [1095, 850] ] },
 
-      // PMM XT30 to Y-Splits (Separate vertical lines)
-      {
-        from: "pmm", to: "y-split-ammoboost", spec: "xt30-pwr", label: "PMM AB",
-        pts: [ [860, 1040], [860, 990], [905, 990], [905, 967] ]
-      },
-      {
-        from: "pmm", to: "y-split-gimbal", spec: "xt30-pwr", label: "PMM Gimbal",
-        pts: [ [950, 1040], [950, 990], [1095, 990], [1095, 967] ]
-      },
+      { from: "pmm", to: "y-split-ammoboost", spec: "xt30-pwr", label: "PMM AB", pts: [ [860, 1040], [860, 990], [905, 990], [905, 967] ] },
+      { from: "pmm", to: "y-split-gimbal", spec: "xt30-pwr", label: "PMM Gimbal", pts: [ [950, 1040], [950, 990], [1095, 990], [1095, 967] ] },
 
-      // MCB Type A to Chassis Breakout (CAN 2 2p)
-      {
-        from: "mcb-type-a", to: "chassis-breakout", spec: "can2-2p", label: "CAN 2 Bus",
-        pts: [ [440, 820], [440, 1125], [1420, 1125] ]
-      },
+      { from: "mcb-type-a", to: "chassis-breakout", spec: "can2-2p", label: "CAN 2 Bus", pts: [ [440, 820], [440, 1125], [1420, 1125] ] },
 
-      // Chassis Breakout to 4 Drive ESCs (Separate dedicated CAN 2 lines)
-      {
-        from: "chassis-breakout", to: "drive-c620-1", spec: "can2-2p", label: "CAN 2 Drive",
-        pts: [ [1420, 1110], [1320, 1110], [1320, 1035] ]
-      },
-      {
-        from: "chassis-breakout", to: "drive-c620-2", spec: "can2-2p", label: "CAN 2 Drive",
-        pts: [ [1440, 1100], [1430, 1100], [1430, 1035] ]
-      },
-      {
-        from: "chassis-breakout", to: "drive-c620-3", spec: "can2-2p", label: "CAN 2 Drive",
-        pts: [ [1540, 1100], [1540, 1035] ]
-      },
-      {
-        from: "chassis-breakout", to: "drive-c620-4", spec: "can2-2p", label: "CAN 2 Drive",
-        pts: [ [1575, 1115], [1650, 1115], [1650, 1035] ]
-      },
+      { from: "chassis-breakout", to: "drive-c620-1", spec: "can2-2p", label: "CAN 2 Drive", pts: [ [1420, 1110], [1320, 1110], [1320, 1035] ] },
+      { from: "chassis-breakout", to: "drive-c620-2", spec: "can2-2p", label: "CAN 2 Drive", pts: [ [1440, 1100], [1430, 1100], [1430, 1035] ] },
+      { from: "chassis-breakout", to: "drive-c620-3", spec: "can2-2p", label: "CAN 2 Drive", pts: [ [1540, 1100], [1540, 1035] ] },
+      { from: "chassis-breakout", to: "drive-c620-4", spec: "can2-2p", label: "CAN 2 Drive", pts: [ [1575, 1115], [1650, 1115], [1650, 1035] ] },
 
-      // Drive ESCs to Drive 3508 Motors (Straight vertical lines)
-      {
-        from: "drive-c620-1", to: "drive-3508-1", spec: "c620-3508-pwr", label: "Phase",
-        pts: [ [1305, 990], [1305, 945] ]
-      },
-      {
-        from: "drive-3508-1", to: "drive-c620-1", spec: "encoder-7p", label: "Enc 7p",
-        pts: [ [1335, 945], [1335, 990] ]
-      },
+      { from: "drive-c620-1", to: "drive-3508-1", spec: "c620-3508-pwr", label: "Phase", pts: [ [1305, 990], [1305, 945] ] },
+      { from: "drive-3508-1", to: "drive-c620-1", spec: "encoder-7p", label: "Enc 7p", pts: [ [1335, 945], [1335, 990] ] },
 
-      {
-        from: "drive-c620-2", to: "drive-3508-2", spec: "c620-3508-pwr", label: "Phase",
-        pts: [ [1415, 990], [1415, 945] ]
-      },
-      {
-        from: "drive-3508-2", to: "drive-c620-2", spec: "encoder-7p", label: "Enc 7p",
-        pts: [ [1445, 945], [1445, 990] ]
-      },
+      { from: "drive-c620-2", to: "drive-3508-2", spec: "c620-3508-pwr", label: "Phase", pts: [ [1415, 990], [1415, 945] ] },
+      { from: "drive-3508-2", to: "drive-c620-2", spec: "encoder-7p", label: "Enc 7p", pts: [ [1445, 945], [1445, 990] ] },
 
-      {
-        from: "drive-c620-3", to: "drive-3508-3", spec: "c620-3508-pwr", label: "Phase",
-        pts: [ [1525, 990], [1525, 945] ]
-      },
-      {
-        from: "drive-3508-3", to: "drive-c620-3", spec: "encoder-7p", label: "Enc 7p",
-        pts: [ [1555, 945], [1555, 990] ]
-      },
+      { from: "drive-c620-3", to: "drive-3508-3", spec: "c620-3508-pwr", label: "Phase", pts: [ [1525, 990], [1525, 945] ] },
+      { from: "drive-3508-3", to: "drive-c620-3", spec: "encoder-7p", label: "Enc 7p", pts: [ [1555, 945], [1555, 990] ] },
 
-      {
-        from: "drive-c620-4", to: "drive-3508-4", spec: "c620-3508-pwr", label: "Phase",
-        pts: [ [1635, 990], [1635, 945] ]
-      },
-      {
-        from: "drive-3508-4", to: "drive-c620-4", spec: "encoder-7p", label: "Enc 7p",
-        pts: [ [1665, 945], [1665, 990] ]
-      },
+      { from: "drive-c620-4", to: "drive-3508-4", spec: "c620-3508-pwr", label: "Phase", pts: [ [1635, 990], [1635, 945] ] },
+      { from: "drive-3508-4", to: "drive-c620-4", spec: "encoder-7p", label: "Enc 7p", pts: [ [1665, 945], [1665, 990] ] },
 
-      // Battery to PMM (2 separate XT60 In lines)
-      {
-        from: "battery", to: "pmm", spec: "xt60-pwr", label: "XT60 In (1)",
-        pts: [ [945, 1340], [945, 1250] ]
-      },
-      {
-        from: "battery", to: "pmm", spec: "xt60-pwr", label: "XT60 In (2)",
-        pts: [ [1005, 1340], [1005, 1250] ]
-      },
+      { from: "battery", to: "pmm", spec: "xt60-pwr", label: "XT60 In (1)", pts: [ [945, 1340], [945, 1250] ] },
+      { from: "battery", to: "pmm", spec: "xt60-pwr", label: "XT60 In (2)", pts: [ [1005, 1340], [1005, 1250] ] },
 
-      // PMM to MCB Type A (XT30 Power)
-      {
-        from: "pmm", to: "mcb-type-a", spec: "xt30-pwr", label: "Chassis MCU Power",
-        pts: [ [820, 1070], [500, 1070], [500, 820] ]
-      },
+      { from: "pmm", to: "mcb-type-a", spec: "xt30-pwr", label: "Chassis MCU Power", pts: [ [820, 1070], [500, 1070], [500, 820] ] },
 
-      // PMM to Current Sensor & Chassis Breakout (XT30 Chassis Power)
-      {
-        from: "pmm", to: "current-sensor", spec: "xt30-pwr", label: "Chassis 24V",
-        pts: [ [1130, 1125], [1220, 1125] ]
-      },
-      {
-        from: "current-sensor", to: "chassis-breakout", spec: "xt30-pwr", label: "Chassis 24V Bus",
-        pts: [ [1355, 1125], [1420, 1125] ]
-      },
+      { from: "pmm", to: "current-sensor", spec: "xt30-pwr", label: "Chassis 24V", pts: [ [1130, 1125], [1220, 1125] ] },
+      { from: "current-sensor", to: "chassis-breakout", spec: "xt30-pwr", label: "Chassis 24V Bus", pts: [ [1355, 1125], [1420, 1125] ] },
 
-      // PMM to Lower Slipring Breakout (MiniPC & Ref Cable)
-      {
-        from: "pmm", to: "lower-slipring-breakout", spec: "xt30-pwr", label: "MiniPC XT30",
-        pts: [ [850, 1040], [850, 850] ]
-      },
-      {
-        from: "pmm", to: "lower-slipring-breakout", spec: "ref-cable", label: "Ref Cable",
-        pts: [ [1120, 1040], [1120, 850] ]
-      },
+      { from: "pmm", to: "lower-slipring-breakout", spec: "xt30-pwr", label: "MiniPC XT30", pts: [ [850, 1040], [850, 850] ] },
+      { from: "pmm", to: "lower-slipring-breakout", spec: "ref-cable", label: "Ref Cable", pts: [ [1120, 1040], [1120, 850] ] },
 
-      // PMM to MCM (Ref Cable)
-      {
-        from: "pmm", to: "mcm", spec: "ref-cable", label: "MCM Ref",
-        pts: [ [1130, 1210], [1160, 1210], [1160, 1250], [1190, 1250] ]
-      },
+      { from: "pmm", to: "mcm", spec: "ref-cable", label: "MCM Ref", pts: [ [1130, 1210], [1160, 1210], [1160, 1250], [1190, 1250] ] },
 
-      // MCM to RFID (Straight vertical line)
-      {
-        from: "mcm", to: "rfid", spec: "rfid-4p", label: "RFID 4p JST",
-        pts: [ [1232, 1276], [1232, 1315] ]
-      },
+      { from: "mcm", to: "rfid", spec: "rfid-4p", label: "RFID 4p JST", pts: [ [1232, 1276], [1232, 1315] ] },
+      { from: "mcm", to: "lightbar", spec: "black-ref", label: "Black Ref", pts: [ [1275, 1250], [1300, 1250], [1300, 1335], [1330, 1335] ] },
 
-      // MCM to Lightbar (Straight horizontal line)
-      {
-        from: "mcm", to: "lightbar", spec: "black-ref", label: "Black Ref",
-        pts: [ [1275, 1250], [1300, 1250], [1300, 1335], [1330, 1335] ]
-      },
+      { from: "pmm", to: "armor-1", spec: "armor-cable", label: "Armor 7p JST", pts: [ [1130, 1070], [1280, 1070], [1280, 1215], [1320, 1215] ] },
+      { from: "pmm", to: "armor-2", spec: "armor-cable", label: "Armor 7p JST", pts: [ [1130, 1090], [1270, 1090], [1270, 1275], [1320, 1275] ] },
 
-      // PMM to Armor 1 & 2 (Two separate Armor 7p JST ports)
-      {
-        from: "pmm", to: "armor-1", spec: "armor-cable", label: "Armor 7p JST",
-        pts: [ [1130, 1070], [1280, 1070], [1280, 1215], [1320, 1215] ]
-      },
-      {
-        from: "pmm", to: "armor-2", spec: "armor-cable", label: "Armor 7p JST",
-        pts: [ [1130, 1090], [1270, 1090], [1270, 1275], [1320, 1275] ]
-      },
-
-      // Armor plate daisy chains (Straight horizontal lines)
-      {
-        from: "armor-1", to: "armor-3", spec: "armor-cable", label: "Armor Loop",
-        pts: [ [1405, 1215], [1445, 1215] ]
-      },
-      {
-        from: "armor-2", to: "armor-4", spec: "armor-cable", label: "Armor Loop",
-        pts: [ [1405, 1275], [1445, 1275] ]
-      }
+      { from: "armor-1", to: "armor-3", spec: "armor-cable", label: "Armor Loop", pts: [ [1405, 1215], [1445, 1215] ] },
+      { from: "armor-2", to: "armor-4", spec: "armor-cable", label: "Armor Loop", pts: [ [1405, 1275], [1445, 1275] ] }
     ];
+
+    // Deep clone helper
+    function clone(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    // Active mutable dataset
+    let MODULES = clone(INITIAL_MODULES);
+    let CONNECTIONS = clone(INITIAL_CONNECTIONS);
+
+    // Grid Snap settings
+    const GRID_SIZES = [20, 10, 5, 0];
+    let gridSnapIdx = 0;
+    let currentGridSize = GRID_SIZES[gridSnapIdx];
+
+    function snap(val, g = currentGridSize) {
+      if (!g || g <= 0) return Math.round(val);
+      return Math.round(val / g) * g;
+    }
+
+    // LocalStorage Key
+    const STORAGE_KEY = "hero_robot_wiring_layout_v2";
+
+    function saveLayout() {
+      try {
+        const payload = {
+          modules: MODULES.map(m => ({ id: m.id, x: m.x, y: m.y })),
+          connections: CONNECTIONS.map(c => ({ from: c.from, to: c.to, spec: c.spec, pts: c.pts }))
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (err) {
+        console.error("Save error:", err);
+      }
+    }
+
+    function loadSavedLayout() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (data.modules && data.connections) {
+          data.modules.forEach(sm => {
+            const m = MODULES.find(x => x.id === sm.id);
+            if (m) { m.x = sm.x; m.y = sm.y; }
+          });
+          data.connections.forEach(sc => {
+            const c = CONNECTIONS.find(x => x.from === sc.from && x.to === sc.to && x.spec === sc.spec);
+            if (c && Array.isArray(sc.pts)) { c.pts = sc.pts; }
+          });
+          return true;
+        }
+      } catch (err) {
+        console.error("Load error:", err);
+      }
+      return false;
+    }
 
     // Canvas State
     let scale = 0.68;
@@ -1157,17 +1133,40 @@
     let startX = 0;
     let startY = 0;
 
+    // Edit Mode State
+    let isEditMode = false;
+    let selectedWire = null;
+    let dragState = null;
+
     const viewport = document.getElementById("viewport");
+    const canvas = document.getElementById("canvas");
     const scene = document.getElementById("scene");
     const detailPanel = document.getElementById("detail-panel");
     const legendList = document.getElementById("legend-list");
+    const editToolbar = document.getElementById("edit-toolbar");
+    const editHintPill = document.getElementById("edit-hint-pill");
+    const btnEditMode = document.getElementById("btn-edit-mode");
+    const editModeLabel = document.getElementById("edit-mode-label");
+    const snapVal = document.getElementById("snap-val");
+    const exportModal = document.getElementById("export-modal");
+    const exportTextarea = document.getElementById("export-textarea");
 
     function updateTransform() {
       scene.setAttribute("transform", `translate(${translateX}, ${translateY}) scale(${scale})`);
     }
 
+    function getSvgCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+      const svgX = (screenX - translateX) / scale;
+      const svgY = (screenY - translateY) / scale;
+      return { svgX, svgY };
+    }
+
     // Render Legend
     function initLegend() {
+      legendList.innerHTML = "";
       Object.values(WIRE_SPECS).forEach(spec => {
         const item = document.createElement("div");
         item.className = "legend-item";
@@ -1244,9 +1243,12 @@
     // Render Slipring Boundary Line
     function renderBoundaries() {
       const layer = document.getElementById("boundaries-layer");
+      layer.innerHTML = "";
+      const slip = MODULES.find(m => m.id === "slipring");
+      const slipY = slip ? slip.y + slip.h / 2 : 589;
       const lineG = document.createElementNS("http://www.w3.org/2000/svg", "g");
       lineG.innerHTML = `
-        <line x1="50" y1="589" x2="1900" y2="589" stroke="#388bfd" stroke-width="2" stroke-dasharray="12 10" opacity="0.35" />
+        <line x1="50" y1="${slipY}" x2="1900" y2="${slipY}" stroke="#388bfd" stroke-width="2" stroke-dasharray="12 10" opacity="0.35" />
       `;
       layer.appendChild(lineG);
     }
@@ -1254,6 +1256,7 @@
     // Render Wires with text labels on every line
     function renderWires() {
       const layer = document.getElementById("wires-layer");
+      layer.innerHTML = "";
 
       CONNECTIONS.forEach((conn) => {
         const spec = WIRE_SPECS[conn.spec];
@@ -1263,6 +1266,10 @@
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         g.classList.add("wire-group");
         g.setAttribute("data-wire-id", spec.id);
+
+        if (conn === selectedWire) {
+          g.classList.add("wire-selected");
+        }
 
         let renderContent = "";
 
@@ -1314,10 +1321,31 @@
 
         g.innerHTML = renderContent;
 
+        // Interaction
+        g.addEventListener("mousedown", (e) => {
+          if (isEditMode) {
+            e.stopPropagation();
+            selectedWire = conn;
+            const coords = getSvgCoords(e);
+            dragState = {
+              type: "wire",
+              conn: conn,
+              startSvgX: coords.svgX,
+              startSvgY: coords.svgY,
+              origPts: conn.pts.map(p => [...p]),
+              hasMoved: false
+            };
+            renderWires();
+            renderEditorOverlay();
+          }
+        });
+
         g.addEventListener("click", (e) => {
           e.stopPropagation();
-          showDetailModal(spec, conn);
-          highlightWires(spec.id);
+          if (!isEditMode) {
+            showDetailModal(spec, conn);
+            highlightWires(spec.id);
+          }
         });
 
         layer.appendChild(g);
@@ -1327,6 +1355,8 @@
     // Render Modules
     function renderModules() {
       const layer = document.getElementById("modules-layer");
+      layer.innerHTML = "";
+
       MODULES.forEach(mod => {
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
@@ -1377,12 +1407,135 @@
           `;
         }
 
+        // Dragging module in Edit Mode
+        g.addEventListener("mousedown", (e) => {
+          if (isEditMode && e.button === 0) {
+            e.stopPropagation();
+            const coords = getSvgCoords(e);
+            const connectedWires = CONNECTIONS.filter(c => c.from === mod.id || c.to === mod.id).map(c => ({
+              conn: c,
+              fromMatch: c.from === mod.id,
+              toMatch: c.to === mod.id,
+              origPts: c.pts.map(p => [...p])
+            }));
+
+            dragState = {
+              type: "module",
+              mod: mod,
+              startSvgX: coords.svgX,
+              startSvgY: coords.svgY,
+              origModX: mod.x,
+              origModY: mod.y,
+              connectedWires: connectedWires,
+              hasMoved: false
+            };
+          }
+        });
+
         g.addEventListener("click", (e) => {
           e.stopPropagation();
-          showModuleModal(mod);
+          if (!isEditMode) {
+            showModuleModal(mod);
+          }
         });
 
         layer.appendChild(g);
+      });
+    }
+
+    // Render Editor Overlay (Draggable Handles for Selected Wire)
+    function renderEditorOverlay() {
+      const layer = document.getElementById("editor-overlay-layer");
+      layer.innerHTML = "";
+
+      if (!isEditMode || !selectedWire) return;
+
+      const conn = selectedWire;
+
+      // 1. Draw midpoint '+' handles for adding waypoints
+      for (let i = 0; i < conn.pts.length - 1; i++) {
+        const p1 = conn.pts[i];
+        const p2 = conn.pts[i + 1];
+        const mx = (p1[0] + p2[0]) / 2;
+        const my = (p1[1] + p2[1]) / 2;
+
+        const midG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        midG.classList.add("midpoint-handle");
+        midG.setAttribute("data-seg-idx", i);
+        midG.innerHTML = `
+          <circle cx="${mx}" cy="${my}" r="6" fill="#238636" stroke="#ffffff" stroke-width="1.5" />
+          <text x="${mx}" y="${my + 3.5}" text-anchor="middle" font-size="9" font-weight="bold" fill="#ffffff" pointer-events="none">+</text>
+        `;
+
+        midG.addEventListener("mousedown", (e) => {
+          e.stopPropagation();
+          // Insert new waypoint at mid point snapped
+          const newPt = [snap(mx), snap(my)];
+          conn.pts.splice(i + 1, 0, newPt);
+
+          const coords = getSvgCoords(e);
+          dragState = {
+            type: "vertex",
+            conn: conn,
+            ptIdx: i + 1,
+            startSvgX: coords.svgX,
+            startSvgY: coords.svgY,
+            origPt: [...newPt],
+            hasMoved: true
+          };
+
+          renderWires();
+          renderEditorOverlay();
+          showToast("Waypoint added! Drag to position.", 1500);
+        });
+
+        layer.appendChild(midG);
+      }
+
+      // 2. Draw circular vertex handles
+      conn.pts.forEach((pt, idx) => {
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.classList.add("vertex-handle");
+        circle.setAttribute("cx", pt[0]);
+        circle.setAttribute("cy", pt[1]);
+        circle.setAttribute("r", "6");
+        circle.setAttribute("fill", "#58a6ff");
+        circle.setAttribute("stroke", "#ffffff");
+        circle.setAttribute("stroke-width", "2");
+        circle.setAttribute("data-pt-idx", idx);
+
+        circle.addEventListener("mousedown", (e) => {
+          if (e.button === 0) {
+            e.stopPropagation();
+            const coords = getSvgCoords(e);
+            dragState = {
+              type: "vertex",
+              conn: conn,
+              ptIdx: idx,
+              startSvgX: coords.svgX,
+              startSvgY: coords.svgY,
+              origPt: [...pt],
+              hasMoved: false
+            };
+          }
+        });
+
+        // Right-click to delete waypoint
+        circle.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (conn.pts.length <= 2) {
+            showToast("Cannot delete: wire must keep at least 2 points", 2000);
+            return;
+          }
+          conn.pts.splice(idx, 1);
+          renderWires();
+          renderEditorOverlay();
+          saveLayout();
+          showToast("Waypoint deleted", 1500);
+        });
+
+        layer.appendChild(circle);
       });
     }
 
@@ -1478,7 +1631,129 @@
       highlightWires(null);
     });
 
-    // Pan and Zoom Event Handlers
+    // Toast notification
+    function showToast(msg, duration = 1800) {
+      let toast = document.getElementById("editor-toast");
+      if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "editor-toast";
+        toast.className = "toast";
+        document.body.appendChild(toast);
+      }
+      toast.innerText = msg;
+      toast.classList.add("visible");
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => {
+        toast.classList.remove("visible");
+      }, duration);
+    }
+
+    // Toggle Edit Mode
+    function setEditMode(active) {
+      isEditMode = active;
+      if (isEditMode) {
+        document.body.classList.add("edit-mode-active");
+        btnEditMode.classList.add("active");
+        editModeLabel.innerText = "Exit Edit Mode";
+        editToolbar.style.display = "flex";
+        editHintPill.style.display = "flex";
+        detailPanel.style.display = "none";
+        highlightWires(null);
+        showToast("✏️ Edit Mode ON - Drag any component or wire");
+      } else {
+        document.body.classList.remove("edit-mode-active");
+        btnEditMode.classList.remove("active");
+        editModeLabel.innerText = "Edit Mode";
+        editToolbar.style.display = "none";
+        editHintPill.style.display = "none";
+        selectedWire = null;
+        renderEditorOverlay();
+        renderWires();
+        showToast("Edit Mode Closed");
+      }
+    }
+
+    btnEditMode.addEventListener("click", () => {
+      setEditMode(!isEditMode);
+    });
+
+    // Cycle grid snap setting
+    document.getElementById("btn-snap").addEventListener("click", () => {
+      gridSnapIdx = (gridSnapIdx + 1) % GRID_SIZES.length;
+      currentGridSize = GRID_SIZES[gridSnapIdx];
+      snapVal.innerText = currentGridSize > 0 ? `${currentGridSize}px` : "Off";
+      showToast(`Grid Snap: ${currentGridSize > 0 ? currentGridSize + 'px' : 'Off'}`);
+    });
+
+    // Manual Save
+    document.getElementById("btn-save").addEventListener("click", () => {
+      saveLayout();
+      showToast("💾 Layout saved successfully!");
+    });
+
+    // Reset Layout
+    document.getElementById("btn-reset-layout").addEventListener("click", () => {
+      if (confirm("Reset all component positions and wire routings back to default layout?")) {
+        localStorage.removeItem(STORAGE_KEY);
+        MODULES = clone(INITIAL_MODULES);
+        CONNECTIONS = clone(INITIAL_CONNECTIONS);
+        selectedWire = null;
+        renderBoundaries();
+        renderWires();
+        renderModules();
+        renderEditorOverlay();
+        showToast("↺ Layout reset to defaults");
+      }
+    });
+
+    // Export Modal
+    document.getElementById("btn-export").addEventListener("click", () => {
+      const exportData = {
+        modules: MODULES.map(m => ({ id: m.id, name: m.name, x: m.x, y: m.y, w: m.w, h: m.h })),
+        connections: CONNECTIONS.map(c => ({ from: c.from, to: c.to, spec: c.spec, label: c.label, pts: c.pts }))
+      };
+      exportTextarea.value = JSON.stringify(exportData, null, 2);
+      exportModal.style.display = "flex";
+    });
+
+    document.getElementById("btn-close-modal").addEventListener("click", () => {
+      exportModal.style.display = "none";
+    });
+
+    document.getElementById("btn-copy-json").addEventListener("click", () => {
+      exportTextarea.select();
+      navigator.clipboard.writeText(exportTextarea.value);
+      showToast("📋 JSON copied to clipboard!");
+    });
+
+    document.getElementById("btn-apply-json").addEventListener("click", () => {
+      try {
+        const parsed = JSON.parse(exportTextarea.value);
+        if (parsed.modules && parsed.connections) {
+          parsed.modules.forEach(sm => {
+            const m = MODULES.find(x => x.id === sm.id);
+            if (m) { m.x = sm.x; m.y = sm.y; }
+          });
+          parsed.connections.forEach(sc => {
+            const c = CONNECTIONS.find(x => x.from === sc.from && x.to === sc.to && x.spec === sc.spec);
+            if (c && Array.isArray(sc.pts)) { c.pts = sc.pts; }
+          });
+          saveLayout();
+          renderBoundaries();
+          renderWires();
+          renderModules();
+          renderEditorOverlay();
+          exportModal.style.display = "none";
+          showToast("✓ Imported layout applied!");
+        } else {
+          alert("Invalid layout JSON format. Must contain 'modules' and 'connections'.");
+        }
+      } catch (err) {
+        alert("JSON Parse Error: " + err.message);
+      }
+    });
+
+    // Pan & Drag Handlers
     viewport.addEventListener("mousedown", (e) => {
       if (e.button === 0) {
         isPanning = true;
@@ -1489,15 +1764,81 @@
     });
 
     window.addEventListener("mousemove", (e) => {
-      if (!isPanning) return;
-      translateX = e.clientX - startX;
-      translateY = e.clientY - startY;
-      updateTransform();
+      if (isPanning) {
+        translateX = e.clientX - startX;
+        translateY = e.clientY - startY;
+        updateTransform();
+        return;
+      }
+
+      if (dragState) {
+        dragState.hasMoved = true;
+        const coords = getSvgCoords(e);
+
+        if (dragState.type === "module") {
+          const targetX = dragState.origModX + (coords.svgX - dragState.startSvgX);
+          const targetY = dragState.origModY + (coords.svgY - dragState.startSvgY);
+          const newX = snap(targetX, currentGridSize);
+          const newY = snap(targetY, currentGridSize);
+
+          const dx = newX - dragState.origModX;
+          const dy = newY - dragState.origModY;
+
+          dragState.mod.x = newX;
+          dragState.mod.y = newY;
+
+          // Shift attached wire endpoints
+          dragState.connectedWires.forEach(item => {
+            if (item.fromMatch) {
+              item.conn.pts[0][0] = item.origPts[0][0] + dx;
+              item.conn.pts[0][1] = item.origPts[0][1] + dy;
+            }
+            if (item.toMatch) {
+              const lastIdx = item.conn.pts.length - 1;
+              item.conn.pts[lastIdx][0] = item.origPts[lastIdx][0] + dx;
+              item.conn.pts[lastIdx][1] = item.origPts[lastIdx][1] + dy;
+            }
+          });
+
+          renderModules();
+          renderWires();
+          renderBoundaries();
+          if (selectedWire) renderEditorOverlay();
+        } else if (dragState.type === "vertex") {
+          const targetX = dragState.origPt[0] + (coords.svgX - dragState.startSvgX);
+          const targetY = dragState.origPt[1] + (coords.svgY - dragState.startSvgY);
+
+          dragState.conn.pts[dragState.ptIdx][0] = snap(targetX, currentGridSize);
+          dragState.conn.pts[dragState.ptIdx][1] = snap(targetY, currentGridSize);
+
+          renderWires();
+          renderEditorOverlay();
+        } else if (dragState.type === "wire") {
+          const dx = snap(coords.svgX - dragState.startSvgX, currentGridSize);
+          const dy = snap(coords.svgY - dragState.startSvgY, currentGridSize);
+
+          dragState.conn.pts.forEach((pt, idx) => {
+            pt[0] = dragState.origPts[idx][0] + dx;
+            pt[1] = dragState.origPts[idx][1] + dy;
+          });
+
+          renderWires();
+          renderEditorOverlay();
+        }
+      }
     });
 
     window.addEventListener("mouseup", () => {
-      isPanning = false;
-      viewport.classList.remove("panning");
+      if (isPanning) {
+        isPanning = false;
+        viewport.classList.remove("panning");
+      }
+      if (dragState) {
+        if (dragState.hasMoved) {
+          saveLayout();
+        }
+        dragState = null;
+      }
     });
 
     viewport.addEventListener("wheel", (e) => {
@@ -1532,14 +1873,34 @@
       updateTransform();
     });
 
+    // Clicking background deselects
     viewport.addEventListener("click", (e) => {
       if (e.target.id === "viewport" || e.target.id === "canvas" || (e.target.tagName === "rect" && e.target.getAttribute("fill")?.includes("grid"))) {
         detailPanel.style.display = "none";
         highlightWires(null);
+        if (isEditMode) {
+          selectedWire = null;
+          renderWires();
+          renderEditorOverlay();
+        }
+      }
+    });
+
+    // Delete key to remove selected waypoint
+    window.addEventListener("keydown", (e) => {
+      if ((e.key === "Escape")) {
+        if (exportModal.style.display === "flex") {
+          exportModal.style.display = "none";
+        } else if (isEditMode) {
+          selectedWire = null;
+          renderWires();
+          renderEditorOverlay();
+        }
       }
     });
 
     // Initialize View
+    loadSavedLayout();
     initLegend();
     renderBoundaries();
     renderWires();
